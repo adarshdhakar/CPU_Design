@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": true,
-      "cwd": "c:/Users/adars/OneDrive/Desktop/CPU_Design",
-      "program": "c:/Users/adars/OneDrive/Desktop/CPU_Design/build/Debug/outDebug",
+      "cwd": "c:/Users/adars/OneDrive/Desktop/COA Lab/CPU_Design",
+      "program": "c:/Users/adars/OneDrive/Desktop/COA Lab/CPU_Design/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [
