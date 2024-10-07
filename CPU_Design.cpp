@@ -51,7 +51,7 @@ void initControlUnit() {
     controlUnit["0110011"] = {1, 1, 0, 10, 0, 0, 0, 0, 0};
 
     // I-type (e.g., addi, ori, andi)
-    controlUnit["0010011"] = {1, 1, 1, 00, 0, 0, 0, 0, 0};
+    controlUnit["0010011"] = {1, 1, 1, 11, 0, 0, 0, 0, 0};
 
     // I-type (Load, e.g., lw)
     controlUnit["0000011"] = {1, 1, 1, 00, 0, 0, 1, 0, 1};
@@ -67,6 +67,12 @@ void initControlUnit() {
 
     // J-type (e.g., jal)
     controlUnit["1101111"] = {0, 1, 0, 00, 0, 1, 0, 0, 0};
+}
+
+void initDM() {
+    for(int i = 0; i < 1024; i++) {
+        DM[i] = 2*i;
+    }
 }
 
 class IFID{
@@ -94,7 +100,7 @@ public:
             }
     };
 public:
-    string imm, func, rdl, rs1, rs2;
+    string imm1, imm2, func, rdl, rs1, rs2;
     int JPC, DPC;
     CW cw;
 };
@@ -147,24 +153,19 @@ public:
     CW cw;
 };
 
-int to_int(string str){
-    int n = stoi(str);
-    int num = n;
-    int dec_value = 0;
- 
-    int base = 1;
- 
-    int temp = num;
-    while (temp) {
-        int last_digit = temp % 10;
-        temp = temp / 10;
- 
-        dec_value += last_digit * base;
- 
-        base = base * 2;
+int to_int(string binaryStr){
+    int decimalValue = 0;
+    int length = binaryStr.length();
+
+    for (int i = 0; i < length; i++) {
+        char bit = binaryStr[length - 1 - i];
+
+        if (bit == '1') {
+            decimalValue += (1 << i); 
+        }
     }
- 
-    return dec_value;
+
+    return decimalValue;
 }
 
 string to_str(int num){
@@ -194,9 +195,10 @@ void IF(IFID &ifid){
 
 void ID(IDEX &idex, IFID &ifid){
     string ir = ifid.IR;
-    idex.JPC = ifid.NPC + SignedExtend(ir.substr(0, 20));
+    idex.JPC = ifid.NPC + 4*SignedExtend(ir.substr(0, 20));
     idex.DPC = ifid.DPC;
-    idex.imm = ir.substr(0, 12);
+    idex.imm1 = ir.substr(0, 12);
+    idex.imm2 = ir.substr(0, 7) + ir.substr(20, 5);
     idex.func = ir.substr(17, 3);
     idex.rdl = ir.substr(20, 5);
     idex.cw.controller(ir.substr(25, 7));
@@ -208,8 +210,8 @@ void ID(IDEX &idex, IFID &ifid){
     }
     if(idex.cw.ALUSrc){
         if(idex.cw.RegRead){
-            cout << "ir.substr(0, 12)" << " " << ir.substr(0, 12) << endl;
-            idex.rs2 = ir.substr(0, 12);
+            cout << "idex.imm1" << " " << idex.imm1 << endl;
+            idex.rs2 = idex.imm1;
         }
     }
     else {
@@ -221,15 +223,14 @@ void ID(IDEX &idex, IFID &ifid){
     }
 }
 
-string ALUControl(int ALUOp, string func) {
+string ALUControl(int ALUOp, string func, string func7) {
     string ALUSelect;
-    string opcode = "0000000";
     
     switch (ALUOp) {
-        case 0:  // Load/Store (for I-type, S-type)
+        case 00:  // Load/Store (for I-type, S-type)
             ALUSelect = "0010";  // Perform ADD for address calculation
             break;
-        case 1:  // Branch (for B-type)
+        case 01:  // Branch (for B-type)
             if (func == "000") {  // beq
                 ALUSelect = "0110";  // Perform SUB for comparison
             } else if (func == "001") {  // bne
@@ -240,7 +241,7 @@ string ALUControl(int ALUOp, string func) {
             break;
         case 10:  // R-type instructions
             if (func == "000") {  // ADD
-                ALUSelect = opcode == "0000000" ? "0010" : "0110";  // ADD or SUB
+                ALUSelect = func7 == "0000000" ? "0010" : "0110";  // ADD or SUB
             } else if (func == "001") {  // SLL
                 ALUSelect = "0011";  // Shift left
             } else if (func == "111") {  // AND
@@ -304,13 +305,13 @@ int ALU(string ALUSelect, string rs1, string rs2) {
 }
 
 void IE(EXMO &exmo, IDEX &idex, IFID &ifid){
-    string ALUSelect = ALUControl(idex.cw.ALUOp, idex.func);
+    string ALUSelect = ALUControl(idex.cw.ALUOp, idex.func, ifid.IR.substr(0, 7));
     cout << "ALUSelect " << ALUSelect << endl;
     exmo.ALUOUT = ALU(ALUSelect, idex.rs1, idex.rs2);
     int ALUZeroFlag = (idex.rs1 == idex.rs2);
     exmo.cw.copyCW(idex);
     if(idex.cw.Branch && ALUZeroFlag){
-        PC = (to_int(idex.imm) << 1) + ifid.NPC;
+        PC = (to_int(idex.imm2) << 1) + ifid.NPC;
     }
     else {
         PC = PC + 4;
@@ -322,6 +323,7 @@ void IE(EXMO &exmo, IDEX &idex, IFID &ifid){
 }
 
 void MA(MOWB &mowb, EXMO &exmo, IDEX &idex){
+    cout << "exmo.ALUOUT " << exmo.ALUOUT << endl;
     if(exmo.cw.MemWrite){
         DM[exmo.ALUOUT] = to_int(idex.rs2);
         cout << "DM[exmo.ALUOUT] " << DM[exmo.ALUOUT] << endl;
@@ -354,13 +356,27 @@ int main () {
     MOWB mowb;
     
     vector<string> machineCode = {
-        "00000000000100010000000110110011"
-        //0000000 00001 00010 000 00011 0110011
+        // "00000000000100010000000110110011" 
+        //0000000 00001 00010 000 00011 0110011 -> R-Type
+        // "00000000101000110000001010010011"
+        //000000001010 00110 000 00101 0010011 -> I-Type
+        // "00000000000000110010000110110111"
+        //00000000000000110010 00011 0110111 -> U-Type
+        // "00000000010000011010010100100011"
+        //0000000 00100 00011 010 01010 0100011 -> S-Type
+        // "00000000101000100010001010000011"
+        //000000001010 00100 010 00101 0000011 -> L-Type
+        // "11111111111111111110001111101111"
+        //11111111111111111110 00111 1101111 -> J-Type
+        // "11111110101101010000110111100011"
+        //1111111 01001 01000 000 11011 1100011 -> B-Type
     };
 
     IM = machineCode;
     PC = 0;
     initControlUnit();
+    initDM();
+
     // while(1) {
     //     RW(mowb);
     //     MA(mowb, exmo, idex);
@@ -376,18 +392,16 @@ int main () {
     cout << endl;
 
     IF(ifid);
-    cout << ifid.IR << endl;
-    cout << ifid.DPC << endl;
-    cout << ifid.NPC << endl;
+    cout << "IR " << ifid.IR << endl;
+    cout << "DPC " << ifid.DPC << endl;
+    cout << "NPC " << ifid.NPC << endl;
 
     cout << endl;
 
     ID(idex, ifid);
 
-    string imm, func, rdl, rs1, rs2;
-    int JPC, DPC;
-
-    cout << "imm " << idex.imm << endl;
+    cout << "imm1 " << idex.imm1 << endl;
+    cout << "imm2 " << idex.imm2 << endl;
     cout << "func "<< idex.func << endl;
     cout << "rdl " << idex.rdl << endl;
     cout << "rs1 " << idex.rs1 << endl;
@@ -417,7 +431,9 @@ int main () {
 
     RW(mowb);
     cout << endl;
-    cout << "GPR[to_int(mowb.rdl)]" << GPR[to_int(mowb.rdl)] << endl;
-
+    cout << "DM[exmo.ALUOUT] " << DM[exmo.ALUOUT] << endl;
+    cout << "to_int(mowb.rdl) " << to_int(mowb.rdl) << endl;
+    cout << "GPR[to_int(mowb.rdl)] " << GPR[to_int(mowb.rdl)] << endl;
+    cout << "PC " << PC << endl;
     return 0;
 }

@@ -1,0 +1,9 @@
+add x2, x1, x2
+damn:
+addi x5, x6, 10
+hello:
+lui x3, 50
+sw x4, 10(x3)
+jal x7, hello
+beq x10, x11, damn
+lw x5, 10(x4)
