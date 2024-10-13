@@ -325,7 +325,7 @@ void IE(EXMO &exmo, IDEX &idex, IFID &ifid){
 void MA(MOWB &mowb, EXMO &exmo, IDEX &idex){
     cout << "exmo.ALUOUT " << exmo.ALUOUT << endl;
     if(exmo.cw.MemWrite){
-        DM[exmo.ALUOUT] = to_int(idex.rs2);
+        DM[exmo.ALUOUT] = GPR[to_int(idex.rs2)];
         cout << "DM[exmo.ALUOUT] " << DM[exmo.ALUOUT] << endl;
     }
     if(exmo.cw.MemRead){
@@ -357,12 +357,12 @@ int main () {
     
     vector<string> machineCode = {
         // "00000000000100010000000110110011" 
-        //0000000 00001 00010 000 00011 0110011 -> R-Type
+        // 0000000 00001 00010 000 00011 0110011 -> R-Type
         // "00000000101000110000001010010011"
         //000000001010 00110 000 00101 0010011 -> I-Type
         // "00000000000000110010000110110111"
         //00000000000000110010 00011 0110111 -> U-Type
-        // "00000000010000011010010100100011"
+        "00000000010000011010010100100011"
         //0000000 00100 00011 010 01010 0100011 -> S-Type
         // "00000000101000100010001010000011"
         //000000001010 00100 010 00101 0000011 -> L-Type
