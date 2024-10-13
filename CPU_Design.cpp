@@ -16,7 +16,7 @@ int GPR[32] = {
     0x7FFFFFFF, // x8: Example usage as saved register (S0/FP)
     4000,       // x9: Example usage as saved register (S1)
     10000,      // x10: Example usage for function arguments (A0)
-    11000,      // x11: Example usage for function arguments (A1)
+    10000,      // x11: Example usage for function arguments (A1)
     12000,      // x12: Example usage for function arguments (A2)
     13000,      // x13: Example usage for function arguments (A3)
     14000,      // x14: Example usage for function arguments (A4)
@@ -153,16 +153,47 @@ public:
     CW cw;
 };
 
-int to_int(string binaryStr){
+// int to_int(string binaryStr){
+//     int decimalValue = 0;
+//     int length = binaryStr.length();
+
+//     for (int i = 0; i < length; i++) {
+//         char bit = binaryStr[length - 1 - i];
+
+//         if (bit == '1') {
+//             decimalValue += (1 << i); 
+//         }
+//     }
+
+//     return decimalValue;
+// }
+
+int to_int(string binaryStr) {
     int decimalValue = 0;
     int length = binaryStr.length();
+    bool isNegative = (binaryStr[0] == '1'); // Check if MSB is 1 (negative in 2's complement)
 
-    for (int i = 0; i < length; i++) {
-        char bit = binaryStr[length - 1 - i];
+    if (!isNegative) {
+        // Handle positive binary numbers (same as before)
+        for (int i = 0; i < length; i++) {
+            char bit = binaryStr[length - 1 - i];
 
-        if (bit == '1') {
-            decimalValue += (1 << i); 
+            if (bit == '1') {
+                decimalValue += (1 << i); 
+            }
         }
+    } else {
+        // Handle negative numbers in 2's complement
+        for (int i = 0; i < length; i++) {
+            char bit = binaryStr[length - 1 - i];
+
+            if (bit == '1' && i != length - 1) { // Exclude the sign bit
+                decimalValue += (1 << i);
+            }
+        }
+
+        // Subtract 2^n to account for 2's complement
+        decimalValue -= (1 << (length - 1));
     }
 
     return decimalValue;
@@ -208,7 +239,7 @@ void ID(IDEX &idex, IFID &ifid){
         cout << "GPR[to_int(ir.substr(12, 5))]" << " " << GPR[to_int(ir.substr(12, 5))] << endl;
         idex.rs1 = to_str(GPR[to_int(ir.substr(12, 5))]);
     }
-    if(idex.cw.ALUSrc){
+    if(idex.cw.ALUSrc && (ir.substr(25, 7) == "0010011" || ir.substr(25, 7) == "0000011")){
         if(idex.cw.RegRead){
             cout << "idex.imm1" << " " << idex.imm1 << endl;
             idex.rs2 = idex.imm1;
@@ -307,11 +338,18 @@ int ALU(string ALUSelect, string rs1, string rs2) {
 void IE(EXMO &exmo, IDEX &idex, IFID &ifid){
     string ALUSelect = ALUControl(idex.cw.ALUOp, idex.func, ifid.IR.substr(0, 7));
     cout << "ALUSelect " << ALUSelect << endl;
-    exmo.ALUOUT = ALU(ALUSelect, idex.rs1, idex.rs2);
+    string opcode = ifid.IR.substr(25, 7);
+    if(opcode == "0100011" || opcode == "1100011"){
+        exmo.ALUOUT = ALU(ALUSelect, idex.rs1, idex.imm2);
+    }
+    else {
+        exmo.ALUOUT = ALU(ALUSelect, idex.rs1, idex.rs2);
+    }
     int ALUZeroFlag = (idex.rs1 == idex.rs2);
     exmo.cw.copyCW(idex);
     if(idex.cw.Branch && ALUZeroFlag){
-        PC = (to_int(idex.imm2) << 1) + ifid.NPC;
+        cout << "(to_int(idex.imm2) << 1) " << (to_int(idex.imm2) << 1) << endl;
+        PC = to_int(idex.imm2)*4 + ifid.NPC;
     }
     else {
         PC = PC + 4;
@@ -325,7 +363,7 @@ void IE(EXMO &exmo, IDEX &idex, IFID &ifid){
 void MA(MOWB &mowb, EXMO &exmo, IDEX &idex){
     cout << "exmo.ALUOUT " << exmo.ALUOUT << endl;
     if(exmo.cw.MemWrite){
-        DM[exmo.ALUOUT] = GPR[to_int(idex.rs2)];
+        DM[exmo.ALUOUT] = to_int(idex.rs2);
         cout << "DM[exmo.ALUOUT] " << DM[exmo.ALUOUT] << endl;
     }
     if(exmo.cw.MemRead){
@@ -362,14 +400,14 @@ int main () {
         //000000001010 00110 000 00101 0010011 -> I-Type
         // "00000000000000110010000110110111"
         //00000000000000110010 00011 0110111 -> U-Type
-        "00000000010000011010010100100011"
+        // "00000000010000011010010100100011"
         //0000000 00100 00011 010 01010 0100011 -> S-Type
         // "00000000101000100010001010000011"
         //000000001010 00100 010 00101 0000011 -> L-Type
         // "11111111111111111110001111101111"
         //11111111111111111110 00111 1101111 -> J-Type
         // "11111110101101010000110111100011"
-        //1111111 01001 01000 000 11011 1100011 -> B-Type
+        //1111111 01011 01010 000 11011 1100011 -> B-Type
     };
 
     IM = machineCode;
