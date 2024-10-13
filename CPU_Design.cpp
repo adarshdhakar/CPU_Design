@@ -6,37 +6,43 @@ int DM[1024];
 vector<string> IM;
 int GPR[32] = {
     0,          // x0: Always 0 (hardwired)
-    5,          // x1: Example value for return address (RA)
-    100,        // x2: Example value for stack pointer (SP)
-    200,        // x3: Example value for global pointer (GP)
-    300,        // x4: Example value for thread pointer (TP)
-    1000,       // x5: Example usage as temporary register (T0)
-    1500,       // x6: Example usage as temporary register (T1)
-    2000,       // x7: Example usage as temporary register (T2)
-    0x7FFFFFFF, // x8: Example usage as saved register (S0/FP)
-    4000,       // x9: Example usage as saved register (S1)
-    10000,      // x10: Example usage for function arguments (A0)
-    10000,      // x11: Example usage for function arguments (A1)
-    12000,      // x12: Example usage for function arguments (A2)
-    13000,      // x13: Example usage for function arguments (A3)
-    14000,      // x14: Example usage for function arguments (A4)
-    15000,      // x15: Example usage for function arguments (A5)
-    16000,      // x16: Example usage for function arguments (A6)
-    17000,      // x17: Example usage for function arguments (A7)
-    18000,      // x18: Example usage as saved register (S2)
-    19000,      // x19: Example usage as saved register (S3)
-    20000,      // x20: Example usage as saved register (S4)
-    21000,      // x21: Example usage as saved register (S5)
-    22000,      // x22: Example usage as saved register (S6)
-    23000,      // x23: Example usage as saved register (S7)
-    24000,      // x24: Example usage as saved register (S8)
-    25000,      // x25: Example usage as saved register (S9)
-    26000,      // x26: Example usage as saved register (S10)
-    27000,      // x27: Example usage as saved register (S11)
-    28000,      // x28: Example usage as temporary register (T3)
-    29000,      // x29: Example usage as temporary register (T4)
-    30000,      // x30: Example usage as temporary register (T5)
-    31000       // x31: Example usage as temporary register (T6)
+    5,          // x1: return address (RA)
+    100,        // x2: stack pointer (SP)
+    200,        // x3: global pointer (GP)
+    300,        // x4: thread pointer (TP)
+    1000,       // x5: temporary register (T0)
+    11,         // x6: temporary register (T1)
+    1,          // x7: temporary register (T2)
+    0,          // x8: saved register (S0/FP)
+    // 1500,       // x6: temporary register (T1)
+    // 2000,       // x7: temporary register (T2)
+    // 0x7FFFFFFF, // x8: saved register (S0/FP)
+    4000,       // x9: saved register (S1)
+                // function arguments
+    10000,      // x10: fa (A0)
+    10000,      // x11: fa (A1)
+    12000,      // x12: fa (A2)
+    13000,      // x13: fa (A3)
+    14000,      // x14: fa (A4)
+    15000,      // x15: fa (A5)
+    16000,      // x16: fa (A6)
+    17000,      // x17: fa (A7)
+                // saved registers
+    18000,      // x18: sr (S2)
+    19000,      // x19: sr (S3)
+    20000,      // x20: sr (S4)
+    21000,      // x21: sr (S5)
+    22000,      // x22: sr (S6)
+    23000,      // x23: sr (S7)
+    24000,      // x24: sr (S8)
+    25000,      // x25: sr (S9)
+    26000,      // x26: sr (S10)
+    27000,      // x27: sr (S11)
+                // temporary registers
+    28000,      // x28: tr (T3)
+    29000,      // x29: tr (T4)
+    30000,      // x30: tr (T5)
+    31000       // x31: tr (T6)
 };
 
 class controlWord {
@@ -73,6 +79,9 @@ void initDM() {
     for(int i = 0; i < 1024; i++) {
         DM[i] = 2*i;
     }
+    DM[11] = 10;
+    DM[1] = 1;
+    DM[0] = 0;
 }
 
 class IFID{
@@ -153,28 +162,12 @@ public:
     CW cw;
 };
 
-// int to_int(string binaryStr){
-//     int decimalValue = 0;
-//     int length = binaryStr.length();
-
-//     for (int i = 0; i < length; i++) {
-//         char bit = binaryStr[length - 1 - i];
-
-//         if (bit == '1') {
-//             decimalValue += (1 << i); 
-//         }
-//     }
-
-//     return decimalValue;
-// }
-
 int to_int(string binaryStr) {
     int decimalValue = 0;
     int length = binaryStr.length();
-    bool isNegative = (binaryStr[0] == '1'); // Check if MSB is 1 (negative in 2's complement)
+    bool isNegative = (binaryStr[0] == '1'); 
 
     if (!isNegative) {
-        // Handle positive binary numbers (same as before)
         for (int i = 0; i < length; i++) {
             char bit = binaryStr[length - 1 - i];
 
@@ -183,16 +176,14 @@ int to_int(string binaryStr) {
             }
         }
     } else {
-        // Handle negative numbers in 2's complement
         for (int i = 0; i < length; i++) {
             char bit = binaryStr[length - 1 - i];
 
-            if (bit == '1' && i != length - 1) { // Exclude the sign bit
+            if (bit == '1' && i != length - 1) { 
                 decimalValue += (1 << i);
             }
         }
 
-        // Subtract 2^n to account for 2's complement
         decimalValue -= (1 << (length - 1));
     }
 
@@ -226,7 +217,7 @@ void IF(IFID &ifid){
 
 void ID(IDEX &idex, IFID &ifid){
     string ir = ifid.IR;
-    idex.JPC = ifid.NPC + 4*SignedExtend(ir.substr(0, 20));
+    idex.JPC = ifid.DPC + 4*SignedExtend(ir.substr(0, 20));
     idex.DPC = ifid.DPC;
     idex.imm1 = ir.substr(0, 12);
     idex.imm2 = ir.substr(0, 7) + ir.substr(20, 5);
@@ -303,12 +294,10 @@ string ALUControl(int ALUOp, string func, string func7) {
 }
 
 int ALU(string ALUSelect, string rs1, string rs2) {
-    // Convert input strings to integers
     int operand1 = bitset<32>(rs1).to_ulong();
     int operand2 = bitset<32>(rs2).to_ulong();
     int result = 0;
 
-    // Perform the operation based on ALUSelect
     if (ALUSelect == "0000") {  // AND
         result = operand1 & operand2;
     } else if (ALUSelect == "0001") {  // OR
@@ -332,7 +321,7 @@ int ALU(string ALUSelect, string rs1, string rs2) {
         return -1;  // Return -1 to indicate an error
     }
 
-    return result;  // Return the result of the ALU operation
+    return result;  
 }
 
 void IE(EXMO &exmo, IDEX &idex, IFID &ifid){
@@ -348,8 +337,8 @@ void IE(EXMO &exmo, IDEX &idex, IFID &ifid){
     int ALUZeroFlag = (idex.rs1 == idex.rs2);
     exmo.cw.copyCW(idex);
     if(idex.cw.Branch && ALUZeroFlag){
-        cout << "(to_int(idex.imm2) << 1) " << (to_int(idex.imm2) << 1) << endl;
-        PC = to_int(idex.imm2)*4 + ifid.NPC;
+        cout << "to_int(idex.imm2)*4 + ifid.DPC " << to_int(idex.imm2)*4 + ifid.DPC << endl;
+        PC = to_int(idex.imm2)*4 + ifid.DPC;
     }
     else {
         PC = PC + 4;
@@ -408,70 +397,76 @@ int main () {
         //11111111111111111110 00111 1101111 -> J-Type
         // "11111110101101010000110111100011"
         //1111111 01011 01010 000 11011 1100011 -> B-Type
+        "00000000000000110010000000000011",
+        "00000000000000111010000010000011",
+        "00000000000001000010000100000011",
+        "00000000000100010000000100110011",
+        "00000000000100001000000010010011",
+        "00000000000000001000000101100011",
+        "11111111111111111101000111101111"
     };
 
     IM = machineCode;
     PC = 0;
     initControlUnit();
     initDM();
+    int n = machineCode.size();
 
-    // while(1) {
-    //     RW(mowb);
-    //     MA(mowb, exmo, idex);
-    //     IE(exmo, idex, ifid);
-    //     ID(idex, ifid);
-    //     IF(ifid);
-    // }    
-    
-    cout << "Loaded in the IM" << endl;
-    for(int i = 0; i < IM.size(); i++){
-        cout << IM[i] << endl;
+    while(PC < n*4){
+        // IF(ifid);
+        // ID(idex, ifid);
+        // IE(exmo, idex, ifid);
+        // MA(mowb, exmo, idex);
+        // RW(mowb);
+        cout << endl << "Instruction: " << PC/4 << endl;
+        IF(ifid);
+        cout << "IR " << ifid.IR << endl;
+        cout << "DPC " << ifid.DPC << endl;
+        cout << "NPC " << ifid.NPC << endl;
+
+        cout << endl;
+
+        ID(idex, ifid);
+
+        cout << "imm1 " << idex.imm1 << endl;
+        cout << "imm2 " << idex.imm2 << endl;
+        cout << "func "<< idex.func << endl;
+        cout << "rdl " << idex.rdl << endl;
+        cout << "rs1 " << idex.rs1 << endl;
+        cout << "rs2 " << idex.rs2 << endl;
+        cout << "JPC " << idex.JPC << endl;
+        cout << "DPC " << idex.DPC << endl;
+        cout << endl;
+        cout << "RegRead " << idex.cw.RegRead << endl;
+        cout << "RegWrite " << idex.cw.RegWrite << endl;
+        cout << "ALUSrc " << idex.cw.ALUSrc << endl;
+        cout << "ALUOp " << idex.cw.ALUOp  << endl;
+        cout << "Branch " << idex.cw.Branch << endl;
+        cout << "Jump " << idex.cw.Jump << endl;
+        cout << "MemRead " << idex.cw.MemRead << endl;
+        cout << "MemWrite " << idex.cw.MemWrite << endl;
+        cout << "Mem2Reg " << idex.cw.Mem2Reg << endl;
+        
+        IE(exmo, idex, ifid);
+        cout << endl;
+        cout << "ALUOUT " << exmo.ALUOUT << endl;
+
+        MA(mowb, exmo, idex);
+        cout << endl;
+        cout << "mowb.ALUOUT " << mowb.ALUOUT << endl;
+        cout << "mowb.LDOUT " << mowb.LDOUT << endl;
+        cout << "mowb.rdl " << mowb.rdl << endl;  
+
+        RW(mowb);
+        cout << endl;
+        cout << "DM[exmo.ALUOUT] " << DM[exmo.ALUOUT] << endl;
+        cout << "to_int(mowb.rdl) " << to_int(mowb.rdl) << endl;
+        cout << "GPR[to_int(mowb.rdl)] " << GPR[to_int(mowb.rdl)] << endl;
+        cout << "PC " << PC << endl;
+        cout << "GPR[0] " << GPR[0] << endl;
+        cout << "GPR[1] " << GPR[1] << endl;
+        cout << "GPR[2] " << GPR[2] << endl;
     }
-    cout << endl;
-
-    IF(ifid);
-    cout << "IR " << ifid.IR << endl;
-    cout << "DPC " << ifid.DPC << endl;
-    cout << "NPC " << ifid.NPC << endl;
-
-    cout << endl;
-
-    ID(idex, ifid);
-
-    cout << "imm1 " << idex.imm1 << endl;
-    cout << "imm2 " << idex.imm2 << endl;
-    cout << "func "<< idex.func << endl;
-    cout << "rdl " << idex.rdl << endl;
-    cout << "rs1 " << idex.rs1 << endl;
-    cout << "rs2 " << idex.rs2 << endl;
-    cout << "JPC " << idex.JPC << endl;
-    cout << "DPC " << idex.DPC << endl;
-    cout << endl;
-    cout << "RegRead " << idex.cw.RegRead << endl;
-    cout << "RegWrite " << idex.cw.RegWrite << endl;
-    cout << "ALUSrc " << idex.cw.ALUSrc << endl;
-    cout << "ALUOp " << idex.cw.ALUOp  << endl;
-    cout << "Branch " << idex.cw.Branch << endl;
-    cout << "Jump " << idex.cw.Jump << endl;
-    cout << "MemRead " << idex.cw.MemRead << endl;
-    cout << "MemWrite " << idex.cw.MemWrite << endl;
-    cout << "Mem2Reg " << idex.cw.Mem2Reg << endl;
     
-    IE(exmo, idex, ifid);
-    cout << endl;
-    cout << "ALUOUT " << exmo.ALUOUT << endl;
-
-    MA(mowb, exmo, idex);
-    cout << endl;
-    cout << "mowb.ALUOUT " << mowb.ALUOUT << endl;
-    cout << "mowb.LDOUT " << mowb.LDOUT << endl;
-    cout << "mowb.rdl " << mowb.rdl << endl;  
-
-    RW(mowb);
-    cout << endl;
-    cout << "DM[exmo.ALUOUT] " << DM[exmo.ALUOUT] << endl;
-    cout << "to_int(mowb.rdl) " << to_int(mowb.rdl) << endl;
-    cout << "GPR[to_int(mowb.rdl)] " << GPR[to_int(mowb.rdl)] << endl;
-    cout << "PC " << PC << endl;
     return 0;
 }
