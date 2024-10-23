@@ -79,7 +79,7 @@ void initDM() {
     for(int i = 0; i < 1024; i++) {
         DM[i] = 2*i;
     }
-    DM[11] = 10;
+    DM[11] = 15;
     DM[1] = 1;
     DM[0] = 0;
 }
@@ -109,7 +109,7 @@ public:
             }
     };
 public:
-    string imm1, imm2, func, rdl, rs1, rs2;
+    string imm1, imm2, func, rdl, rs1, rs2, IR;
     int JPC, DPC;
     CW cw;
 };
@@ -133,7 +133,7 @@ public:
             }
     };
 public:
-    string rdl;
+    string rdl, rs2;
     int ALUOUT;
     CW cw;
 };
@@ -224,6 +224,7 @@ void ID(IDEX &idex, IFID &ifid){
     idex.func = ir.substr(17, 3);
     idex.rdl = ir.substr(20, 5);
     idex.cw.controller(ir.substr(25, 7));
+    idex.IR = ifid.IR;
 
     if(idex.cw.RegRead){
         cout << "ir.substr(12, 5)" << " " << ir.substr(12, 5) << endl;
@@ -324,10 +325,10 @@ int ALU(string ALUSelect, string rs1, string rs2) {
     return result;  
 }
 
-void IE(EXMO &exmo, IDEX &idex, IFID &ifid){
-    string ALUSelect = ALUControl(idex.cw.ALUOp, idex.func, ifid.IR.substr(0, 7));
+void IE(EXMO &exmo, IDEX &idex){
+    string ALUSelect = ALUControl(idex.cw.ALUOp, idex.func, idex.IR.substr(0, 7));
     cout << "ALUSelect " << ALUSelect << endl;
-    string opcode = ifid.IR.substr(25, 7);
+    string opcode = idex.IR.substr(25, 7);
     if(opcode == "0100011" || opcode == "1100011"){
         exmo.ALUOUT = ALU(ALUSelect, idex.rs1, idex.imm2);
     }
@@ -337,8 +338,8 @@ void IE(EXMO &exmo, IDEX &idex, IFID &ifid){
     int ALUZeroFlag = (idex.rs1 == idex.rs2);
     exmo.cw.copyCW(idex);
     if(idex.cw.Branch && ALUZeroFlag){
-        cout << "to_int(idex.imm2)*4 + ifid.DPC " << to_int(idex.imm2)*4 + ifid.DPC << endl;
-        PC = to_int(idex.imm2)*4 + ifid.DPC;
+        cout << "to_int(idex.imm2)*4 + ifid.DPC " << to_int(idex.imm2)*4 + idex.DPC << endl;
+        PC = to_int(idex.imm2)*4 + idex.DPC;
     }
     else {
         PC = PC + 4;
@@ -347,12 +348,13 @@ void IE(EXMO &exmo, IDEX &idex, IFID &ifid){
         PC = idex.JPC;
     }
     exmo.rdl = idex.rdl;
+    exmo.rs2 = idex.rs2;
 }
 
-void MA(MOWB &mowb, EXMO &exmo, IDEX &idex){
+void MA(MOWB &mowb, EXMO &exmo){
     cout << "exmo.ALUOUT " << exmo.ALUOUT << endl;
     if(exmo.cw.MemWrite){
-        DM[exmo.ALUOUT] = to_int(idex.rs2);
+        DM[exmo.ALUOUT] = to_int(exmo.rs2);
         cout << "DM[exmo.ALUOUT] " << DM[exmo.ALUOUT] << endl;
     }
     if(exmo.cw.MemRead){
@@ -447,11 +449,11 @@ int main () {
         cout << "MemWrite " << idex.cw.MemWrite << endl;
         cout << "Mem2Reg " << idex.cw.Mem2Reg << endl;
         
-        IE(exmo, idex, ifid);
+        IE(exmo, idex);
         cout << endl;
         cout << "ALUOUT " << exmo.ALUOUT << endl;
 
-        MA(mowb, exmo, idex);
+        MA(mowb, exmo);
         cout << endl;
         cout << "mowb.ALUOUT " << mowb.ALUOUT << endl;
         cout << "mowb.LDOUT " << mowb.LDOUT << endl;
