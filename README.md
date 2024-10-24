@@ -32,7 +32,7 @@ This project is a **RISC-V Pipeline Simulator** written in C++. It simulates the
 
 2. Compile the source code using g++:
     ```bash
-    g++ -o simulator main.cpp -std=c++11
+    g++ -o simulator CPU_Design.cpp -std=c++11
     ```
 
 3. Ensure you have a working C++11 or later compiler installed.
@@ -52,9 +52,10 @@ This project is a **RISC-V Pipeline Simulator** written in C++. It simulates the
 ```bash
 risc-v-pipeline-simulator/ 
 │ 
-├── main.cpp    # Main simulator code 
-├── README.md   # This file 
-└── Makefile    # Makefile for building the project
+├── CPU_Design.cpp    # Main simulator code 
+├── AssemblyCode.txt    # Main simulator code 
+├── MachineCode.txt    # Main simulator code 
+└── README.md   # This file 
 ```
 
 ## Instruction Set
