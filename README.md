@@ -50,11 +50,11 @@ This project is a **RISC-V Pipeline Simulator** written in C++. It simulates the
 
 ## Project Structure
 ```bash
-    risc-v-pipeline-simulator/ 
-    │ 
-    ├── main.cpp    # Main simulator code 
-    ├── README.md   # This file 
-    └── Makefile    # Makefile for building the project
+risc-v-pipeline-simulator/ 
+│ 
+├── main.cpp    # Main simulator code 
+├── README.md   # This file 
+└── Makefile    # Makefile for building the project
 ```
 
 ## Instruction Set
