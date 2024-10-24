@@ -49,13 +49,13 @@ This project is a **RISC-V Pipeline Simulator** written in C++. It simulates the
 3. The output will show the register values, pipeline stage information, and any relevant memory operations.
 
 ## Project Structure
-    ```bash
+```bash
     risc-v-pipeline-simulator/ 
     │ 
     ├── main.cpp    # Main simulator code 
     ├── README.md   # This file 
     └── Makefile    # Makefile for building the project
-    ```
+```
 
 ## Instruction Set
 The simulator supports a subset of RISC-V instructions, including:
