@@ -52,10 +52,10 @@ This project is a **RISC-V Pipeline Simulator** written in C++. It simulates the
 ```bash
 risc-v-pipeline-simulator/ 
 │ 
-├── CPU_Design.cpp    # Main simulator code 
+├── CPU_Design.cpp      # Main simulator code 
 ├── AssemblyCode.txt    # Main simulator code 
-├── MachineCode.txt    # Main simulator code 
-└── README.md   # This file 
+├── MachineCode.txt     # Main simulator code 
+└── README.md           # This file 
 ```
 
 ## Instruction Set
