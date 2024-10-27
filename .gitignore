@@ -1,7 +1,7 @@
 .vscode
 Downloaded
-CPU_Design.exe
-Another.cpp
-Another.exe
-hello.cpp
-hello.exe
+*.exe
+hello*
+Another*
+CPU_Moodle*
+tester*
