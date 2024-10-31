@@ -2,48 +2,23 @@
 using namespace std;
 
 int PC;
-int DM[1024];
+int DM[1024]={0};
 vector<string> IM;
-int GPR[32] = {
-    0,    // x0: Always 0 (hardwired)
-    5,    // x1: return address (RA)
-    100,  // x2: stack pointer (SP)
-    200,  // x3: global pointer (GP)
-    300,  // x4: thread pointer (TP)
-    1000, // x5: temporary register (T0)
-    11,   // x6: temporary register (T1)
-    1,    // x7: temporary register (T2)
-    0,    // x8: saved register (S0/FP)
-    // 1500,       // x6: temporary register (T1)
-    // 2000,       // x7: temporary register (T2)
-    // 0x7FFFFFFF, // x8: saved register (S0/FP)
-    4000,  // x9: saved register (S1)
-           // function arguments
-    10000, // x10: fa (A0)
-    10000, // x11: fa (A1)
-    12000, // x12: fa (A2)
-    13000, // x13: fa (A3)
-    14000, // x14: fa (A4)
-    15000, // x15: fa (A5)
-    16000, // x16: fa (A6)
-    17000, // x17: fa (A7)
-           // saved registers
-    18000, // x18: sr (S2)
-    19000, // x19: sr (S3)
-    20000, // x20: sr (S4)
-    21000, // x21: sr (S5)
-    22000, // x22: sr (S6)
-    23000, // x23: sr (S7)
-    24000, // x24: sr (S8)
-    25000, // x25: sr (S9)
-    26000, // x26: sr (S10)
-    27000, // x27: sr (S11)
-           // temporary registers
-    28000, // x28: tr (T3)
-    29000, // x29: tr (T4)
-    30000, // x30: tr (T5)
-    31000  // x31: tr (T6)
-};
+int N;
+
+bitset<32> registerLock;
+bool stage1Active = true;
+bool stage2Active = false;
+bool stage3Active = false;
+bool stage4Active = false;
+bool stage5Active = false;
+bool stopForOneTime_1 = false;
+bool stopForOneTime_2 = false;
+
+bool bubbleInserted_data = false;
+bool bubbleInserted_control = false;
+
+int GPR[32]={0};
 
 class controlWord
 {
@@ -79,13 +54,13 @@ void initControlUnit()
 
 void initDM()
 {
-    for (int i = 0; i < 1024; i++)
-    {
-        DM[i] = 2 * i;
-    }
-    DM[11] = 15;
-    DM[1] = 1;
-    DM[0] = 0;
+    // for (int i = 0; i < 1024; i++)
+    // {
+    //     DM[i] = 2 * i;
+    // }
+    // DM[11] = 10;
+    // DM[1] = 1;
+    DM[0] = 1;
 }
 
 class IFID
@@ -217,6 +192,29 @@ int to_int(string binaryStr)
     return decimalValue;
 }
 
+void detectHazard(string controlWord_s3, string registerDestination_s4, string registerSource1_s3, string registerSource2_s3){
+    if(controlWord_s3 == "0110011" || controlWord_s3 == "1100011"){
+        if (registerDestination_s4 == registerSource1_s3 || registerDestination_s4 == registerSource2_s3) {
+            bubbleInserted_data = true;
+            registerLock[stoi(registerDestination_s4,NULL,2)]=1;
+            cout<<"data bubble inserted"<<endl;
+            cout << "inserted at R/B type" << endl;
+        }
+    }
+    if(controlWord_s3 == "0010011" || controlWord_s3 == "0000011"){
+        if (registerDestination_s4 == registerSource1_s3) {
+            bubbleInserted_data = true;
+            registerLock[stoi(registerDestination_s4,NULL,2)]=1;
+            cout<<"data bubble inserted"<<endl;
+            cout << "inserted at load/store" <<endl;
+        }
+    }
+    if(controlWord_s3 == "1100011" || controlWord_s3 == "1101111"){
+        bubbleInserted_control = true;
+        cout<<"control bubble inserted"<<endl;
+    } 
+}
+
 string to_str(int num)
 {
     cout << num << endl;
@@ -241,14 +239,40 @@ int SignedExtend(string imm)
 
 void IF(IFID &ifid)
 {
-    int idx = PC / 4;
-    ifid.IR = IM[idx];
-    ifid.DPC = PC;
-    ifid.NPC = PC + 4;
+    if(bubbleInserted_data || bubbleInserted_control){
+        cout << "stopped due to bubble insertion" << endl;
+        return;
+    }
+
+    if(PC < N*4){
+        int idx = PC / 4;
+        ifid.IR = IM[idx];
+        ifid.DPC = PC;
+        PC = PC + 4;
+        stage2Active = true;
+    }
+    else {
+        stage1Active = false;
+    }
 }
 
-void ID(IDEX &idex, IFID &ifid)
+void ID(IDEX &idex, IFID &ifid, EXMO &exmo)
 {
+    if(!stage1Active){
+        stage2Active = false;
+        return;
+    }
+
+    if(stopForOneTime_1){
+        stopForOneTime_1 = false;
+        return;
+    }
+
+    if(bubbleInserted_data || bubbleInserted_control){
+        cout<< "stage2 stopped due to bubble insertion"<<endl;
+        return;
+    }
+
     string ir = ifid.IR;
     idex.JPC = ifid.DPC + 4 * SignedExtend(ir.substr(0, 20));
     idex.DPC = ifid.DPC;
@@ -259,29 +283,9 @@ void ID(IDEX &idex, IFID &ifid)
     idex.cw.controller(ir.substr(25, 7));
     idex.IR = ifid.IR;
 
-    if (idex.cw.RegRead)
-    {
-        cout << "ir.substr(12, 5)" << " " << ir.substr(12, 5) << endl;
-        cout << "GPR[to_int(ir.substr(12, 5))]" << " " << GPR[to_int(ir.substr(12, 5))] << endl;
-        idex.rs1 = to_str(GPR[to_int(ir.substr(12, 5))]);
-    }
-    if (idex.cw.ALUSrc && (ir.substr(25, 7) == "0010011" || ir.substr(25, 7) == "0000011"))
-    {
-        if (idex.cw.RegRead)
-        {
-            cout << "idex.imm1" << " " << idex.imm1 << endl;
-            idex.rs2 = idex.imm1;
-        }
-    }
-    else
-    {
-        if (idex.cw.RegRead)
-        {
-            cout << "ir.substr(7, 5)" << " " << ir.substr(7, 5) << endl;
-            cout << "GPR[to_int(ir.substr(7, 5))]" << " " << GPR[to_int(ir.substr(7, 5))] << endl;
-            idex.rs2 = to_str(GPR[to_int(ir.substr(7, 5))]);
-        }
-    }
+    stage3Active = true;
+    
+    detectHazard(idex.IR.substr(25, 7), exmo.rdl, ir.substr(12, 5), ir.substr(7, 5));
 }
 
 string ALUControl(int ALUOp, string func, string func7)
@@ -357,8 +361,8 @@ string ALUControl(int ALUOp, string func, string func7)
 
 int ALU(string ALUSelect, string rs1, string rs2)
 {
-    int operand1 = bitset<32>(rs1).to_ulong();
-    int operand2 = bitset<32>(rs2).to_ulong();
+    int operand1 = stoi(rs1, NULL, 2);
+    int operand2 = stoi(rs2, NULL, 2);
     int result = 0;
 
     if (ALUSelect == "0000")
@@ -408,6 +412,47 @@ int ALU(string ALUSelect, string rs1, string rs2)
 
 void IE(EXMO &exmo, IDEX &idex)
 {
+    if(!stage2Active){
+        stage3Active = false;
+        return;
+    }
+
+    if(bubbleInserted_data){
+        cout<<"stage 3 stopped due to bubbleInserted"<<endl;
+        return;
+    }
+
+    if(stopForOneTime_1){
+        cout<<"stopped for one time 1"<<endl;
+        return;
+    }
+
+    string ir = idex.IR;
+
+    if (idex.cw.RegRead)
+    {
+        cout << "ir.substr(12, 5)" << " " << ir.substr(12, 5) << endl;
+        cout << "GPR[to_int(ir.substr(12, 5))]" << " " << GPR[to_int(ir.substr(12, 5))] << endl;
+        idex.rs1 = to_str(GPR[to_int(ir.substr(12, 5))]);
+    }
+    if (idex.cw.ALUSrc && (ir.substr(25, 7) == "0010011" || ir.substr(25, 7) == "0000011"))
+    {
+        if (idex.cw.RegRead)
+        {
+            cout << "idex.imm1" << " " << idex.imm1 << endl;
+            idex.rs2 = idex.imm1;
+        }
+    }
+    else
+    {
+        if (idex.cw.RegRead)
+        {
+            cout << "ir.substr(7, 5)" << " " << ir.substr(7, 5) << endl;
+            cout << "GPR[to_int(ir.substr(7, 5))]" << " " << GPR[to_int(ir.substr(7, 5))] << endl;
+            idex.rs2 = to_str(GPR[to_int(ir.substr(7, 5))]);
+        }
+    }
+
     string ALUSelect = ALUControl(idex.cw.ALUOp, idex.func, idex.IR.substr(0, 7));
     cout << "ALUSelect " << ALUSelect << endl;
     string opcode = idex.IR.substr(25, 7);
@@ -421,25 +466,35 @@ void IE(EXMO &exmo, IDEX &idex)
     }
     int ALUZeroFlag = (idex.rs1 == idex.rs2);
     exmo.cw.copyCW(idex);
-    if (idex.cw.Branch && ALUZeroFlag)
-    {
-        cout << "to_int(idex.imm2)*4 + ifid.DPC " << to_int(idex.imm2) * 4 + idex.DPC << endl;
-        PC = to_int(idex.imm2) * 4 + idex.DPC;
+
+    if (idex.cw.Branch){
+        if(ALUZeroFlag){
+            cout << "to_int(idex.imm2)*4 + ifid.DPC " << to_int(idex.imm2) * 4 + idex.DPC << endl;
+            PC = to_int(idex.imm2) * 4 + idex.DPC;
+        }
+        if(bubbleInserted_control) stopForOneTime_1 = true;
+        bubbleInserted_control = false;
     }
-    else
-    {
-        PC = PC + 4;
-    }
+
     if (idex.cw.Jump)
     {
         PC = idex.JPC;
+        if(bubbleInserted_control) stopForOneTime_1 = true;
+        bubbleInserted_control = false;
     }
     exmo.rdl = idex.rdl;
     exmo.rs2 = idex.rs2;
+
+    stage4Active = true;  
 }
 
 void MA(MOWB &mowb, EXMO &exmo)
 {
+    if(!stage3Active) {
+        stage4Active = false;
+        return;
+    }
+
     cout << "exmo.ALUOUT " << exmo.ALUOUT << endl;
     if (exmo.cw.MemWrite)
     {
@@ -455,20 +510,37 @@ void MA(MOWB &mowb, EXMO &exmo)
     mowb.ALUOUT = exmo.ALUOUT;
     mowb.cw.copyCW(exmo);
     mowb.rdl = exmo.rdl;
+
+    stage5Active = true;  
 }
 
 void RW(MOWB &mowb)
 {
+    if (!stage4Active) {
+        stage5Active = false;
+        return;
+    }
+
+    bool toUnlockRegister = false;
+
     if (mowb.cw.RegWrite)
     {
         if (mowb.cw.Mem2Reg)
         {
             GPR[to_int(mowb.rdl)] = mowb.LDOUT;
+            if(registerLock[stoi(mowb.rdl,NULL,2)]==1) toUnlockRegister = true;
         }
         else
         {
             GPR[to_int(mowb.rdl)] = mowb.ALUOUT;
+            if(registerLock[stoi(mowb.rdl,NULL,2)]==1) toUnlockRegister = true;
         }
+    }
+
+    if(toUnlockRegister) {
+        bubbleInserted_data = false;
+        stopForOneTime_1 = true;
+        registerLock[stoi(mowb.rdl,NULL,2)]=0;
     }
 }
 
@@ -480,91 +552,94 @@ int main()
     MOWB mowb;
 
     vector<string> machineCode = {
-        // "00000000000100010000000110110011"
-        // 0000000 00001 00010 000 00011 0110011 -> R-Type
-        // "00000000101000110000001010010011"
-        // 000000001010 00110 000 00101 0010011 -> I-Type
-        // "00000000000000110010000110110111"
-        // 00000000000000110010 00011 0110111 -> U-Type
-        // "00000000010000011010010100100011"
-        // 0000000 00100 00011 010 01010 0100011 -> S-Type
-        // "00000000101000100010001010000011"
-        // 000000001010 00100 010 00101 0000011 -> L-Type
-        // "11111111111111111110001111101111"
-        // 11111111111111111110 00111 1101111 -> J-Type
-        // "11111110101101010000110111100011"
-        // 1111111 01011 01010 000 11011 1100011 -> B-Type
-        "00000000000000110010000000000011",
-        "00000000000000111010000010000011",
-        "00000000000001000010000100000011",
-        "00000000000100010000000100110011",
-        "00000000000100001000000010010011",
-        "00000000000000001000000101100011",
-        "11111111111111111101000111101111"};
+        "00000000000000000010000010000011",
+        "00000000000000001000011001100011",
+        "00000000000100011000000110010011",
+        "00000000001100001000010101100011",
+        "00000000000100000000000100010011",
+        "00000000000100100000001000010011",
+        "00000000000100010000001101100011",
+        "00000000010100100000000110110011",
+        "00000000000000100000001010110011",
+        "00000000000000011000001000110011",
+        "00000000000100010000000100010011",
+        "11111111111111111011001101101111",
+        "00000000001100000010000010100011"
+    };
 
     IM = machineCode;
     PC = 0;
     initControlUnit();
     initDM();
     int n = machineCode.size();
+    N = n;
 
-    while (PC < n * 4)
-    {
-        // IF(ifid);
-        // ID(idex, ifid);
-        // IE(exmo, idex, ifid);
-        // MA(mowb, exmo, idex);
-        // RW(mowb);
-        cout << endl
+    while(PC < n*4 || stage1Active || stage2Active || stage3Active || stage4Active || stage5Active){
+        if(stage5Active){
+            RW(mowb);
+            cout << "stage5" << endl;
+            cout << endl;
+            cout << "DM[exmo.ALUOUT] " << DM[exmo.ALUOUT] << endl;
+            cout << "to_int(mowb.rdl) " << to_int(mowb.rdl) << endl;
+            cout << "GPR[to_int(mowb.rdl)] " << GPR[to_int(mowb.rdl)] << endl;
+            cout << "PC " << PC << endl;
+            cout << "GPR[0] " << GPR[0] << endl;
+            cout << "GPR[1] " << GPR[1] << endl;
+            cout << "GPR[2] " << GPR[2] << endl;
+            cout << "GPR[3] " << GPR[3] << endl;
+            cout << "GPR[4] " << GPR[4] << endl;
+            cout << "GPR[5] " << GPR[5] << endl;
+            cout << "DM[0] " << DM[0] << endl;
+            cout << "DM[1] " << DM[1] << endl;
+        }
+        if(stage4Active) {
+            MA(mowb, exmo);
+            cout << "stage4" << endl;
+            cout << endl;
+            cout << "mowb.ALUOUT " << mowb.ALUOUT << endl;
+            cout << "mowb.LDOUT " << mowb.LDOUT << endl;
+            cout << "mowb.rdl " << mowb.rdl << endl;
+        }
+        if(stage3Active) {
+            IE(exmo, idex);
+            cout << "stage3" << endl;
+            cout << endl;
+            cout << "ALUOUT " << exmo.ALUOUT << endl;
+        }
+        if(stage2Active) {
+            cout << "stage2" << endl;
+            ID(idex, ifid, exmo);
+            
+            cout << "imm1 " << idex.imm1 << endl;
+            cout << "imm2 " << idex.imm2 << endl;
+            cout << "func " << idex.func << endl;
+            cout << "rdl " << idex.rdl << endl;
+            cout << "rs1 " << idex.rs1 << endl;
+            cout << "rs2 " << idex.rs2 << endl;
+            cout << "JPC " << idex.JPC << endl;
+            cout << "DPC " << idex.DPC << endl;
+            cout << endl;
+            cout << "RegRead " << idex.cw.RegRead << endl;
+            cout << "RegWrite " << idex.cw.RegWrite << endl;
+            cout << "ALUSrc " << idex.cw.ALUSrc << endl;
+            cout << "ALUOp " << idex.cw.ALUOp << endl;
+            cout << "Branch " << idex.cw.Branch << endl;
+            cout << "Jump " << idex.cw.Jump << endl;
+            cout << "MemRead " << idex.cw.MemRead << endl;
+            cout << "MemWrite " << idex.cw.MemWrite << endl;
+            cout << "Mem2Reg " << idex.cw.Mem2Reg << endl;
+        }
+        if(stage1Active) {
+            cout << "stage1" << endl;
+            cout << endl
              << "Instruction: " << PC / 4 << endl;
-        IF(ifid);
-        cout << "IR " << ifid.IR << endl;
-        cout << "DPC " << ifid.DPC << endl;
-        cout << "NPC " << ifid.NPC << endl;
+            IF(ifid);
+            cout << "IR " << ifid.IR << endl;
+            cout << "DPC " << ifid.DPC << endl;
+            cout << "NPC " << ifid.NPC << endl;
 
-        cout << endl;
-
-        ID(idex, ifid);
-
-        cout << "imm1 " << idex.imm1 << endl;
-        cout << "imm2 " << idex.imm2 << endl;
-        cout << "func " << idex.func << endl;
-        cout << "rdl " << idex.rdl << endl;
-        cout << "rs1 " << idex.rs1 << endl;
-        cout << "rs2 " << idex.rs2 << endl;
-        cout << "JPC " << idex.JPC << endl;
-        cout << "DPC " << idex.DPC << endl;
-        cout << endl;
-        cout << "RegRead " << idex.cw.RegRead << endl;
-        cout << "RegWrite " << idex.cw.RegWrite << endl;
-        cout << "ALUSrc " << idex.cw.ALUSrc << endl;
-        cout << "ALUOp " << idex.cw.ALUOp << endl;
-        cout << "Branch " << idex.cw.Branch << endl;
-        cout << "Jump " << idex.cw.Jump << endl;
-        cout << "MemRead " << idex.cw.MemRead << endl;
-        cout << "MemWrite " << idex.cw.MemWrite << endl;
-        cout << "Mem2Reg " << idex.cw.Mem2Reg << endl;
-
-        IE(exmo, idex);
-        cout << endl;
-        cout << "ALUOUT " << exmo.ALUOUT << endl;
-
-        MA(mowb, exmo);
-        cout << endl;
-        cout << "mowb.ALUOUT " << mowb.ALUOUT << endl;
-        cout << "mowb.LDOUT " << mowb.LDOUT << endl;
-        cout << "mowb.rdl " << mowb.rdl << endl;
-
-        RW(mowb);
-        cout << endl;
-        cout << "DM[exmo.ALUOUT] " << DM[exmo.ALUOUT] << endl;
-        cout << "to_int(mowb.rdl) " << to_int(mowb.rdl) << endl;
-        cout << "GPR[to_int(mowb.rdl)] " << GPR[to_int(mowb.rdl)] << endl;
-        cout << "PC " << PC << endl;
-        cout << "GPR[0] " << GPR[0] << endl;
-        cout << "GPR[1] " << GPR[1] << endl;
-        cout << "GPR[2] " << GPR[2] << endl;
+            cout << endl;
+        }
     }
-
     return 0;
 }
