@@ -3,9 +3,7 @@ using namespace std;
 
 //_____________________________________________________________________________________________________________//
 
-
 //************************************************* ASSEMBLER STARTS ******************************************//
-
 //_____________________________________________________________________________________________________________//
 
 
@@ -346,7 +344,6 @@ private:
 
     void joinCodes()
     {
-        // cout << func7 << " " << rs2 << " " << rs1 << " " << func3 << " " << rd << " " << opcode << endl;
         machineCode = func7 + rs2 + rs1 + func3 + rd + opcode;
     }
 
@@ -743,13 +740,11 @@ void printCodes(string codeType, vector<string> &code)
 
 //********************************************** ASSEMBLER ENDS ********************************************//
 
-//__________________________________________________________________________________________________________//
 
+//__________________________________________________________________________________________________________//
 
 //************************************************* CPU START **********************************************//
-
 //__________________________________________________________________________________________________________//
-
 
 
 //********************************************** Global Variables ******************************************//
@@ -801,38 +796,34 @@ map<string, controlWord> controlUnit;
 
 void initControlUnit()
 {
-    // R-type (e.g., add, sub, and, or)
+    // R-type 
     controlUnit["0110011"] = {1, 1, 0, 10, 0, 0, 0, 0, 0};
 
-    // I-type (e.g., addi, ori, andi)
+    // I-type 
     controlUnit["0010011"] = {1, 1, 1, 11, 0, 0, 0, 0, 0};
 
-    // I-type (Load, e.g., lw)
+    // I-type (Load)
     controlUnit["0000011"] = {1, 1, 1, 00, 0, 0, 1, 0, 1};
 
-    // S-type (Store, e.g., sw)
+    // S-type 
     controlUnit["0100011"] = {1, 0, 1, 00, 0, 0, 0, 1, 2}; // Mem2Reg is X (Don't care)
 
-    // B-type (Branch, e.g., beq, bne)
+    // B-type
     controlUnit["1100011"] = {1, 0, 0, 01, 1, 0, 0, 0, 2}; // Mem2Reg is X (Don't care)
 
-    // U-type (e.g., lui, auipc)
+    // U-type
     controlUnit["0110111"] = {0, 1, 1, 00, 0, 0, 0, 0, 0};
 
-    // J-type (e.g., jal)
+    // J-type
     controlUnit["1101111"] = {0, 1, 0, 00, 0, 1, 0, 0, 0};
 }
 
 void initDM()
 {
-    // for (int i = 0; i < 1024; i++)
-    // {
-    //     DM[i] = 2 * i;
-    // }
-    
-    // DM[11] = 10; //Fibonacci
+    // DM[11] = 10; 
     // DM[1] = 1;
-    DM[0] = 10; //N-Sum
+    
+    DM[0] = 10; // N-Sum & Fibonacci
 }
 
 //***************************************************************************************************************************//
@@ -1128,65 +1119,72 @@ string ALUControl(int ALUOp, string func, string func7)
 
     switch (ALUOp)
     {
-    case 00:                // Load/Store (for I-type, S-type)
-        ALUSelect = "0010"; // Perform ADD for address calculation
+    case 00:                    
+        ALUSelect = "0010";         // Load/Store (for I-type, S-type), Perform ADD for address calculation
         break;
-    case 01: // Branch (for B-type)
+    case 01:                    
         if (func == "000")
-        {                       // beq
-            ALUSelect = "0110"; // Perform SUB for comparison
+        {                       
+            ALUSelect = "0110";     // beq -> Perform SUB for comparison
         }
         else if (func == "001")
-        {                       // bne
-            ALUSelect = "0110"; // SUB for comparison
+        {                       
+            ALUSelect = "0110";     // bne -> SUB for comparison
         }
         else
         {
-            ALUSelect = "1111"; // Undefined
+            ALUSelect = "1111";     // Undefined
         }
         break;
-    case 10: // R-type instructions
+    case 10: 
         if (func == "000")
-        {                                                     // ADD
-            ALUSelect = func7 == "0000000" ? "0010" : "0110"; // ADD or SUB
+        {                                                     
+            if (func7 == "0000000") 
+            {
+                ALUSelect = "0010"; // ADD
+            }
+            else 
+            {
+                ALUSelect = "0110"; // SUB
+            }
         }
         else if (func == "001")
-        {                       // SLL
-            ALUSelect = "0011"; // Shift left
+        {                       
+            ALUSelect = "0011";     // SLL
         }
         else if (func == "111")
-        { // AND
-            ALUSelect = "0000";
+        { 
+            ALUSelect = "0000";     // AND
         }
         else if (func == "110")
-        { // OR
-            ALUSelect = "0001";
+        { 
+            ALUSelect = "0001";     // OR
         }
         else
         {
-            ALUSelect = "1111"; // Undefined
+            ALUSelect = "1111";     // Undefined
         }
         break;
-    case 11: // I-type instructions
+    case 11: 
         if (func == "000")
-        {                       // ADDI
-            ALUSelect = "0010"; // ADD immediate
+        {                       
+            ALUSelect = "0010";     // ADDI
         }
         else if (func == "010")
-        {                       // SLTI
-            ALUSelect = "0111"; // Set less than immediate
+        {                       
+            ALUSelect = "0111";     // SLTI
         }
         else if (func == "100")
-        {                       // XORI
-            ALUSelect = "0011"; // XOR immediate
+        {                       
+            ALUSelect = "0011";     // XORI
         }
         else
         {
-            ALUSelect = "1111"; // Undefined
+            ALUSelect = "1111";     // Undefined
         }
         break;
     default:
-        ALUSelect = "1111"; // Undefined operation
+        ALUSelect = "1111";         // Undefined operation
         break;
     }
 
@@ -1199,46 +1197,46 @@ int ALU(string ALUSelect, string rs1, string rs2)
     int operand2 = stoi(rs2, NULL, 2);
     int result = 0;
 
-    if (ALUSelect == "0000")
-    { // AND
-        result = operand1 & operand2;
+    if (ALUSelect == "0000")                      
+    { 
+        result = operand1 & operand2;   // AND
     }
     else if (ALUSelect == "0001")
-    { // OR
-        result = operand1 | operand2;
+    {       
+        result = operand1 | operand2;   // OR
     }
     else if (ALUSelect == "0010")
-    { // ADD
-        result = operand1 + operand2;
+    { 
+        result = operand1 + operand2;   // ADD
     }
     else if (ALUSelect == "0110")
-    { // SUB
-        result = operand1 - operand2;
+    { 
+        result = operand1 - operand2;   // SUB
     }
     else if (ALUSelect == "0011")
-    {                                           // SLL
-        result = operand1 << (operand2 & 0x1F); // Logical Shift Left
+    {                                           
+        result = operand1 << (operand2 & 0x1F); // SLL
     }
     else if (ALUSelect == "0100")
-    {                                           // SRL
-        result = operand1 >> (operand2 & 0x1F); // Logical Shift Right
+    {                                           
+        result = operand1 >> (operand2 & 0x1F); // SRL
     }
     else if (ALUSelect == "0101")
-    {                                           // SRA
-        result = operand1 >> (operand2 & 0x1F); // Arithmetic Shift Right
+    {                                           
+        result = operand1 >> (operand2 & 0x1F); // SRA
     }
     else if (ALUSelect == "0111")
-    { // SLT (Set Less Than)
-        result = (operand1 < operand2) ? 1 : 0;
+    { 
+        result = (operand1 < operand2) ? 1 : 0; // SLT
     }
     else if (ALUSelect == "1000")
-    { // SLTU (Set Less Than Unsigned)
-        result = ((unsigned int)operand1 < (unsigned int)operand2) ? 1 : 0;
+    { 
+        result = ((unsigned int)operand1 < (unsigned int)operand2) ? 1 : 0; // SLTU 
     }
     else if (ALUSelect == "1111")
-    { // Undefined operation
+    {
         std::cerr << "Error: Undefined ALU operation." << std::endl;
-        return -1; // Return -1 to indicate an error
+        return -1; 
     }
 
     return result;
@@ -1299,7 +1297,6 @@ int IE(EXMO &exmo, IDEX &idex)
     }
 
     string ALUSelect = ALUControl(idex.cw.ALUOp, idex.func, idex.IR.substr(0, 7));
-    // cout << "ALUSelect " << ALUSelect << endl;
 
     string opcode = idex.IR.substr(25, 7);
     if (opcode == "0100011" || opcode == "1100011")
@@ -1317,7 +1314,7 @@ int IE(EXMO &exmo, IDEX &idex)
     {
         if (ALUZeroFlag)
         {
-            cout << "BPC = to_int(idex.imm2)*4 + ifid.DPC " << to_int(idex.imm2) * 4 + idex.DPC << endl;
+            cout << "BPC = to_int(idex.imm2)*4 + idex.DPC " << to_int(idex.imm2) * 4 + idex.DPC << endl;
             PC = to_int(idex.imm2) * 4 + idex.DPC;
         }
 
@@ -1454,15 +1451,13 @@ void printGPR()
 
 //____________________________________________________________________________________________________________________//
 
-
 //*************************************************** MAIN FUNCTION **************************************************//
-
 //____________________________________________________________________________________________________________________//
 
 int main()
 {
 
-//********************************************** Assembly to Machine Code ********************************************//
+//********************************************** Assembler -> Assembly to Machine Code ********************************************//
 
     vector<string> assemblyCode = {
 
@@ -1470,20 +1465,20 @@ int main()
 
         // "lw x5, 0(x6)",        // (x5 = DM[x6+0];)
 
-        "addi x5, x5, 10",      // int n = 10;
-        "addi x1, x1, 0",       // int i = 0; (x1 = 0)
-        "addi x2, x2, 0",       // int sum = 0;
+        // "addi x5, x5, 10",      // int n = 10;
+        // "addi x1, x1, 0",       // int i = 0; (x1 = 0)
+        // "addi x2, x2, 0",       // int sum = 0;
 
-        "addi x5, x5, 1",       // n = n + 1;
+        // "addi x5, x5, 1",       // n = n + 1;
 
-        "sum_loop:",            
-        "beq x1, x5, done",     // if(i == n) goto done;
-        "add x2, x2, x1",       // sum = sum + i;
-        "addi x1, x1, 1",       // i = i + 1;
-        "jal x3, sum_loop",     
+        // "sum_loop:",            
+        // "beq x1, x5, done",     // if(i == n) goto done;
+        // "add x2, x2, x1",       // sum = sum + i;
+        // "addi x1, x1, 1",       // i = i + 1;
+        // "jal x3, sum_loop",     
 
-        "done:",    
-        "sw x2, 0(x31)"         // DM[x31+0] = x2;
+        // "done:",    
+        // "sw x2, 0(x31)"         // DM[x31+0] = x2;
 
         /**********************************************************/
 
@@ -1492,33 +1487,32 @@ int main()
 
         // "lw x1, 0(x7)",         // x1 = DM[x7+0];
 
-        // "addi x1, x1, 10",      // int n = 0;
-        // "beq x1, x0, done",     // if(n == 0) goto done;
-        // "addi x3, x3, 1",       // int c = 1;
-        // "beq x1, x3, done",     // if(n == 1) goto done;
+        "addi x1, x1, 10",      // int n = 0;
+        "beq x1, x0, done",     // if(n == 0) goto done;
+        "addi x3, x3, 1",       // int c = 1;
+        "beq x1, x3, done",     // if(n == 1) goto done;
 
-        // "addi x2, x2, 1",       // int i = 1; 
+        "addi x2, x2, 1",       // int i = 1; 
 
-        // "addi x4, x4, 1",       // int b = 1;
-        // "addi x5, x5, 0",       // int a = 0;
+        "addi x4, x4, 1",       // int b = 1;
+        "addi x5, x5, 0",       // int a = 0;
 
-        // "for:",
-        // "beq x2, x1, done",     // if(i == n) goto done;
-        // "add x3, x4, x5",       // c = b + a;
-        // "add x5, x4, x0",       // a = b + 0;
-        // "add x4, x3, x0",       // b = c + 0;
+        "for:",
+        "beq x2, x1, done",     // if(i == n) goto done;
+        "add x3, x4, x5",       // c = b + a;
+        "add x5, x4, x0",       // a = b + 0;
+        "add x4, x3, x0",       // b = c + 0;
 
-        // "addi x2, x2, 1",       // i = i + 1;
-        // "jal x6, for",          // jump to for
+        "addi x2, x2, 1",       // i = i + 1;
+        "jal x6, for",          // jump to for
 
-        // "done:",
-        // "sw x3, 1(x0)"          // DM[x0+1] = x3;
+        "done:",
+        "sw x3, 1(x0)"          // DM[x0+1] = x3;
 
         /**********************************************************/
     };
 
     // readCodeAndFindLabel(assemblyCode);
-
     int count = 0;
     for (int i = 0; i < assemblyCode.size(); i++)
     {
@@ -1530,11 +1524,6 @@ int main()
         }
         count++;
     }
-
-    // for (auto &label : labels)
-    // {
-    //     cout << label.first << " " << label.second << endl;
-    // }
 
     Assembler assembler;
     vector<string> machineCode = convertToMachineCode(assembler, assemblyCode);
@@ -1553,7 +1542,7 @@ int main()
 //********************************************************************************************************************//
 
 
-//********************************************** Machine Code to Output **********************************************//
+//********************************************** CPU -> Machine Code to Output **********************************************//
     
     //********************* Initializations *********************//
 
