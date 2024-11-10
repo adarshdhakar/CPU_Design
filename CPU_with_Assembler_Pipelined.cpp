@@ -1,6 +1,16 @@
 #include <bits/stdc++.h>
 using namespace std;
 
+//_____________________________________________________________________________________________________________//
+
+
+//************************************************* ASSEMBLER STARTS ******************************************//
+
+//_____________________________________________________________________________________________________________//
+
+
+//******************************************** Functions Initializations **************************************//
+
 map<string, int> labels;
 unordered_map<string, vector<string>> functions;
 
@@ -73,6 +83,11 @@ void initializeFunctions()
     addJTypeInstructions();
 }
 
+//****************************************************************************************************//
+
+
+//***************************************** Register Mapping *****************************************//
+
 unordered_map<string, string> registers = {
     {"zero", "x0"},
     {"ra", "x1"},
@@ -108,6 +123,11 @@ unordered_map<string, string> registers = {
     {"t5", "x30"},
     {"t6", "x31"},
 };
+
+//*****************************************************************************************************//
+
+
+//*************************************** Hex to Binary convertor *************************************//
 
 string hexDigitToBinary(char hexDigit)
 {
@@ -150,10 +170,17 @@ string hexDigitToBinary(char hexDigit)
     }
 }
 
+//*********************************************************************************************************//
+
+
+//******************************** Instruction Class with Required Functions ******************************//
+
 class Instruction
 {
 public:
     string machineCode;
+
+    //***************************************** Twos Complementor *****************************************//
 
     char flip(char c)
     {
@@ -188,6 +215,11 @@ public:
 
         return twos;
     }
+
+    //******************************************************************************************************//
+
+
+    //********************************** Hex to Binary / Decimal to Binary **********************************//
 
     string hexToBin(string hex)
     {
@@ -265,12 +297,16 @@ public:
         return s;
     }
 
+    //****************************************************************************************************************//
+
+
+    //***************************************** Label to Immediate Convertor *****************************************//
+
     void labelToImme(string &str, int n, int lineNum)
     {
         int offset = lineNum - labels[str] - 1;
         offset--;
 
-        // cout << str << endl;
         if (offset > 0)
         {
             str = to_string(offset);
@@ -286,11 +322,22 @@ public:
         }
     }
 
+    //****************************************************************************************************************//
+
+
     string getMachineCode()
     {
         return machineCode;
     }
 };
+
+//********************************************************************************************************************//
+
+
+//********************************* Instructions inherited from Instruction Class ************************************//
+
+
+//**************************************************** R-Type ********************************************************//
 
 class R : public Instruction
 {
@@ -299,7 +346,7 @@ private:
 
     void joinCodes()
     {
-        cout << func7 << " " << rs2 << " " << rs1 << " " << func3 << " " << rd << " " << opcode << endl;
+        // cout << func7 << " " << rs2 << " " << rs1 << " " << func3 << " " << rd << " " << opcode << endl;
         machineCode = func7 + rs2 + rs1 + func3 + rd + opcode;
     }
 
@@ -322,6 +369,11 @@ public:
         joinCodes();
     }
 };
+
+//***************************************************************************************************************//
+
+
+//**************************************************** I-Type ***************************************************//
 
 class I : public Instruction
 {
@@ -358,6 +410,11 @@ public:
     }
 };
 
+//***************************************************************************************************************//
+
+
+//**************************************************** S-Type ***************************************************//
+
 class S : public Instruction
 {
 private:
@@ -390,6 +447,11 @@ public:
     }
 };
 
+//***************************************************************************************************************//
+
+
+//*************************************************** B-Type ****************************************************//
+
 class B : public Instruction
 {
 private:
@@ -413,12 +475,11 @@ public:
         rs1 = findRegister(rs1);
 
         string str = inst_break[3];
-        // cout << str << endl;
+
         labelToImme(str, 12, lineNum);
-        // cout << str << endl;
+
         this->imm2 = str.substr(0, 7);
         this->imm1 = str.substr(7, 12);
-        // cout << this->imm2 << " " << this-> imm1 << endl;
 
         // labelToImme(str,  13, lineNum);
         // str.erase(str.size() - 1);
@@ -429,6 +490,11 @@ public:
         joinCodes();
     }
 };
+
+//***************************************************************************************************************//
+
+
+//*************************************************** U-Type ****************************************************//
 
 class U : public Instruction
 {
@@ -454,6 +520,11 @@ public:
         joinCodes();
     }
 };
+
+//***************************************************************************************************************//
+
+
+//**************************************************** J-Type ***************************************************//
 
 class J : public Instruction
 {
@@ -484,9 +555,17 @@ public:
     }
 };
 
+//***************************************************************************************************************//
+
+
+//*********************************************** Assembler Class ***********************************************//
+
 class Assembler
 {
 private:
+
+
+    //**************************************** String Parser ****************************************//
     string tolowerString(const string &func)
     {
         string str = "";
@@ -518,6 +597,9 @@ private:
             }
         }
     }
+
+    //*************************************************************************************************//
+
 
     string help_assembler(vector<string> &inst_break, vector<string> &modeAndFunc, int lineNum, string addMode)
     {
@@ -556,6 +638,7 @@ private:
         return machineCode;
     }
 
+    //********************************************** Assembler Constructor and Assemble **********************************************//
 public:
     Assembler()
     {
@@ -582,7 +665,11 @@ public:
 
         return machineCode;
     }
+    //*******************************************************************************************************************************//
 };
+
+
+//********************************************** Label Processing **********************************************//
 
 void readCodeAndFindLabel(vector<string> &assemblyCode)
 {
@@ -600,12 +687,14 @@ void readCodeAndFindLabel(vector<string> &assemblyCode)
             labels[line] = count;
         }
         assemblyCode.push_back(line);
-        // cout << line << endl;
+        
         count++;
     }
 
     fin.close();
 }
+
+//**************************************************************************************************************//
 
 vector<string> convertToMachineCode(Assembler assembler, vector<string> &assemblyCode)
 {
@@ -631,24 +720,51 @@ vector<string> convertToMachineCode(Assembler assembler, vector<string> &assembl
     return machineCode;
 }
 
-void printCodes(vector<string> &code)
+void printCodes(string codeType, vector<string> &code)
 {
-    cout << endl;
+    if(codeType == "M")
+    {
+        cout << "----------------Machine Code------------------" << endl;
+    }
+    else if(codeType == "A")
+    {
+        cout << "----------------Assembly Code-----------------" << endl;
+    }
+
     for (auto &it : code)
     {
         // cout << "\"" << it << "\"," << endl;
         cout << it << endl;
     }
+
+    cout << "----------------------------------------------" << endl;
 }
 
-//--------------------------------------------------------------------Assembler Ends--------------------------------------------------------------------//
 
-//--------------------------------------------------------------------CPU Starts--------------------------------------------------------------------//
+//********************************************** ASSEMBLER ENDS ********************************************//
+
+//__________________________________________________________________________________________________________//
+
+
+//************************************************* CPU START **********************************************//
+
+//__________________________________________________________________________________________________________//
+
+
+
+//********************************************** Global Variables ******************************************//
 
 int PC;
 int DM[1024] = {0};
 vector<string> IM;
+int GPR[32] = {0};
 int N;
+
+//**********************************************************************************************************//
+
+
+//********************************************** Hazard handling *******************************************//
+//Class and Variable to incorporate Pipeline
 
 class Valid
 {
@@ -665,14 +781,16 @@ public:
 };
 Valid valid;
 
-bitset<32> registerLock;
+bitset<32> inUse;
 
-bool stopForOneTime = false;
-bool bubbleInserted_data = false;
-bool bubbleInserted_control = false;
+bool stopOnce = false;
+bool data_bubble = false;
+bool control_bubble= false;
 
-int GPR[32] = {0};
+//**************************************************************************************************************//
 
+
+//************************************************ Initializations *********************************************//
 class controlWord
 {
 public:
@@ -693,10 +811,10 @@ void initControlUnit()
     controlUnit["0000011"] = {1, 1, 1, 00, 0, 0, 1, 0, 1};
 
     // S-type (Store, e.g., sw)
-    controlUnit["0100011"] = {1, 0, 1, 00, 0, 0, 0, 1, -1}; // Mem2Reg is X (Don't care)
+    controlUnit["0100011"] = {1, 0, 1, 00, 0, 0, 0, 1, 2}; // Mem2Reg is X (Don't care)
 
     // B-type (Branch, e.g., beq, bne)
-    controlUnit["1100011"] = {1, 0, 0, 01, 1, 0, 0, 0, -1}; // Mem2Reg is X (Don't care)
+    controlUnit["1100011"] = {1, 0, 0, 01, 1, 0, 0, 0, 2}; // Mem2Reg is X (Don't care)
 
     // U-type (e.g., lui, auipc)
     controlUnit["0110111"] = {0, 1, 1, 00, 0, 0, 0, 0, 0};
@@ -711,10 +829,16 @@ void initDM()
     // {
     //     DM[i] = 2 * i;
     // }
-    DM[11] = 10; //Fibonacci
-    DM[1] = 1;
+    
+    // DM[11] = 10; //Fibonacci
+    // DM[1] = 1;
     DM[0] = 10; //N-Sum
 }
+
+//***************************************************************************************************************************//
+
+
+//****************************************** Instruction Fetch, Instruction Decode ******************************************//
 
 class IFID
 {
@@ -723,6 +847,10 @@ public:
     int DPC, NPC;
 };
 
+//***************************************************************************************************************************//
+
+
+//***************************************** Instruction Decode, Instruction Execute *****************************************//
 class IDEX
 {
 public:
@@ -751,6 +879,10 @@ public:
     CW cw;
 };
 
+//***************************************************************************************************************************//
+
+
+//****************************************** Instruction Execute, Memory Operation ******************************************//
 class EXMO
 {
 public:
@@ -780,6 +912,11 @@ public:
     CW cw;
 };
 
+//******************************************************************************************************************//
+
+
+//****************************************** Memory Operation, Write Back ******************************************//
+
 class MOWB
 {
 public:
@@ -808,6 +945,11 @@ public:
     int ALUOUT, LDOUT;
     CW cw;
 };
+
+//******************************************************************************************************************//
+
+
+//****************************************** String to Int, Int to String ******************************************//
 
 int to_int(string binaryStr)
 {
@@ -845,38 +987,8 @@ int to_int(string binaryStr)
     return decimalValue;
 }
 
-void detectHazard(string controlWord_s3, string registerDestination_s4, string registerSource1_s3, string registerSource2_s3)
-{
-    if (controlWord_s3 == "0110011" || controlWord_s3 == "1100011")
-    {
-        if (registerDestination_s4 == registerSource1_s3 || registerDestination_s4 == registerSource2_s3)
-        {
-            bubbleInserted_data = true;
-            registerLock[stoi(registerDestination_s4, NULL, 2)] = 1;
-            cout << "data bubble inserted" << endl;
-            cout << "inserted at R/B type" << endl;
-        }
-    }
-    if (controlWord_s3 == "0010011" || controlWord_s3 == "0000011")
-    {
-        if (registerDestination_s4 == registerSource1_s3)
-        {
-            bubbleInserted_data = true;
-            registerLock[stoi(registerDestination_s4, NULL, 2)] = 1;
-            cout << "data bubble inserted" << endl;
-            cout << "inserted at load/store" << endl;
-        }
-    }
-    if (controlWord_s3 == "1100011" || controlWord_s3 == "1101111")
-    {
-        bubbleInserted_control = true;
-        cout << "control bubble inserted" << endl;
-    }
-}
-
 string to_str(int num)
 {
-    cout << num << endl;
     bitset<32> binary(num);
     return binary.to_string();
 }
@@ -896,12 +1008,54 @@ int SignedExtend(string imm)
     return to_int(extended_imm);
 }
 
-void IF(IFID &ifid)
+//********************************************************************************************************************//
+
+
+//************************************************* Hazard Detector **************************************************//
+
+void detectHazard(string cW_s3, string rd_s4, string rs1_s3, string rs2_s3)
 {
-    if (bubbleInserted_data || bubbleInserted_control)
+    // R-Type and B-Type
+    if (cW_s3 == "0110011" || cW_s3 == "1100011")
     {
-        cout << "stopped due to bubble insertion" << endl;
-        return;
+        if (rd_s4 == rs1_s3 || rd_s4 == rs2_s3)
+        {
+            data_bubble = true;
+            inUse[stoi(rd_s4, NULL, 2)] = 1;
+            cout << "data bubble inserted due to R/B type" << endl;
+        }
+    }
+
+    // I-Type and Load-Type
+    if (cW_s3 == "0010011" || cW_s3 == "0000011")
+    {
+        if (rd_s4 == rs1_s3)
+        {
+            data_bubble = true;
+            inUse[stoi(rd_s4, NULL, 2)] = 1;
+            cout << "data bubble inserted due to load/store type" << endl;
+        }
+    }
+
+    // B-Type and J-Type
+    if (cW_s3 == "1100011" || cW_s3 == "1101111")
+    {
+        control_bubble= true;
+        cout << "control bubble inserted due to J/B type" << endl;
+    }
+}
+
+//***************************************************************************************************************//
+
+
+//********************************************** Instruction Fetch **********************************************//
+
+int IF(IFID &ifid)
+{
+    if (data_bubble || control_bubble)
+    {
+        cout << "IF stopped due to bubble insertion" << endl;
+        return 0;
     }
 
     if (PC < N * 4)
@@ -916,26 +1070,34 @@ void IF(IFID &ifid)
     {
         valid.PC = false;
     }
+
+    return 1;
 }
 
-void ID(IDEX &idex, IFID &ifid, EXMO &exmo)
+//****************************************************************************************************************//
+
+
+//********************************************** Instruction Decode **********************************************//
+
+int ID(IDEX &idex, IFID &ifid, EXMO &exmo)
 {
     if (!valid.PC)
     {
         valid.ifid = false;
-        return;
+        cout << "Stopped due to invalid PC" << endl;
+        return 0;
     }
 
-    if (stopForOneTime)
+    if (stopOnce)
     {
-        stopForOneTime = false;
-        return;
+        stopOnce = false;
+        return 0;
     }
 
-    if (bubbleInserted_data || bubbleInserted_control)
+    if (data_bubble || control_bubble)
     {
-        cout << "stage2 stopped due to bubble insertion" << endl;
-        return;
+        cout << "ID stopped due to bubble insertion" << endl;
+        return 0;
     }
 
     string ir = ifid.IR;
@@ -951,7 +1113,14 @@ void ID(IDEX &idex, IFID &ifid, EXMO &exmo)
     valid.idex = true;
 
     detectHazard(idex.IR.substr(25, 7), exmo.rdl, ir.substr(12, 5), ir.substr(7, 5));
+
+    return 1;
 }
+
+//*************************************************************************************************//
+
+
+//********************************************** ALU **********************************************//
 
 string ALUControl(int ALUOp, string func, string func7)
 {
@@ -1075,34 +1244,42 @@ int ALU(string ALUSelect, string rs1, string rs2)
     return result;
 }
 
-void IE(EXMO &exmo, IDEX &idex)
+//*****************************************************************************************************************//
+
+
+//********************************************** Instruction Execute **********************************************//
+
+int IE(EXMO &exmo, IDEX &idex)
 {
     if (!valid.ifid)
     {
+        cout << "Stopped due to invalid IFID" << endl;
         valid.idex = false;
-        return;
+        return 0;
     }
 
-    if (bubbleInserted_data)
+    if (data_bubble)
     {
-        cout << "stage 3 stopped due to bubbleInserted" << endl;
-        return;
+        cout << "IE stopped due to bubble insertion" << endl;
+        return 0;
     }
 
-    if (stopForOneTime)
+    if (stopOnce)
     {
-        cout << "stopped for one time 1" << endl;
-        return;
+        cout << "Stopped for one time" << endl;
+        return 0;
     }
 
     string ir = idex.IR;
 
     if (idex.cw.RegRead)
     {
-        cout << "ir.substr(12, 5)" << " " << ir.substr(12, 5) << endl;
-        cout << "GPR[to_int(ir.substr(12, 5))]" << " " << GPR[to_int(ir.substr(12, 5))] << endl;
+        cout << "rsl1 -> ir.substr(12, 5)" << " " << ir.substr(12, 5) << endl;
+        cout << "GPR[to_int(rsl1)]" << " " << GPR[to_int(ir.substr(12, 5))] << endl;
         idex.rs1 = to_str(GPR[to_int(ir.substr(12, 5))]);
     }
+    
+    // For load or store
     if (idex.cw.ALUSrc && (ir.substr(25, 7) == "0010011" || ir.substr(25, 7) == "0000011"))
     {
         if (idex.cw.RegRead)
@@ -1115,14 +1292,15 @@ void IE(EXMO &exmo, IDEX &idex)
     {
         if (idex.cw.RegRead)
         {
-            cout << "ir.substr(7, 5)" << " " << ir.substr(7, 5) << endl;
-            cout << "GPR[to_int(ir.substr(7, 5))]" << " " << GPR[to_int(ir.substr(7, 5))] << endl;
+            cout << "rsl2 -> ir.substr(7, 5)" << " " << ir.substr(7, 5) << endl;
+            cout << "GPR[to_int(rsl2)]" << " " << GPR[to_int(ir.substr(7, 5))] << endl;
             idex.rs2 = to_str(GPR[to_int(ir.substr(7, 5))]);
         }
     }
 
     string ALUSelect = ALUControl(idex.cw.ALUOp, idex.func, idex.IR.substr(0, 7));
-    cout << "ALUSelect " << ALUSelect << endl;
+    // cout << "ALUSelect " << ALUSelect << endl;
+
     string opcode = idex.IR.substr(25, 7);
     if (opcode == "0100011" || opcode == "1100011")
     {
@@ -1139,33 +1317,50 @@ void IE(EXMO &exmo, IDEX &idex)
     {
         if (ALUZeroFlag)
         {
-            cout << "to_int(idex.imm2)*4 + ifid.DPC " << to_int(idex.imm2) * 4 + idex.DPC << endl;
+            cout << "BPC = to_int(idex.imm2)*4 + ifid.DPC " << to_int(idex.imm2) * 4 + idex.DPC << endl;
             PC = to_int(idex.imm2) * 4 + idex.DPC;
         }
-        if (bubbleInserted_control)
-            stopForOneTime = true;
-        bubbleInserted_control = false;
+
+        if (control_bubble)
+        {
+            stopOnce = true;
+        }
+            
+        control_bubble= false;
     }
 
     if (idex.cw.Jump)
     {
         PC = idex.JPC;
-        if (bubbleInserted_control)
-            stopForOneTime = true;
-        bubbleInserted_control = false;
+        
+        if (control_bubble)
+        {
+            stopOnce = true;
+        }
+            
+        control_bubble= false;
     }
+
     exmo.rdl = idex.rdl;
     exmo.rs2 = idex.rs2;
 
     valid.exmo = true;
+
+    return 1;
 }
 
-void MA(MOWB &mowb, EXMO &exmo)
+//**************************************************************************************************************//
+
+
+//********************************************** Memory Operation **********************************************//
+
+int MO(MOWB &mowb, EXMO &exmo)
 {
     if (!valid.idex)
     {
+        cout << "Stopped due to invalid IDEX" << endl;
         valid.exmo = false;
-        return;
+        return 0;
     }
 
     cout << "exmo.ALUOUT " << exmo.ALUOUT << endl;
@@ -1185,84 +1380,146 @@ void MA(MOWB &mowb, EXMO &exmo)
     mowb.rdl = exmo.rdl;
 
     valid.mowb = true;
+
+    return 1;
 }
 
-void RW(MOWB &mowb)
+//********************************************************************************************************//
+
+
+//********************************************** Write Back **********************************************//
+
+
+int WB(MOWB &mowb)
 {
     if (!valid.exmo)
     {
+        cout << "Stopped due to invalid EXMO" << endl;
         valid.mowb = false;
-        return;
+        return 0;
     }
 
-    bool toUnlockRegister = false;
+    bool shouldUnlock = false;
 
     if (mowb.cw.RegWrite)
     {
         if (mowb.cw.Mem2Reg)
         {
             GPR[to_int(mowb.rdl)] = mowb.LDOUT;
-            if (registerLock[stoi(mowb.rdl, NULL, 2)] == 1)
-                toUnlockRegister = true;
+            cout << "GPR[to_int(mowb.rdl)] " << GPR[to_int(mowb.rdl)] << endl;
+
+            if (inUse[stoi(mowb.rdl, NULL, 2)] == 1)
+            {
+                shouldUnlock = true;
+            }
         }
         else
         {
             GPR[to_int(mowb.rdl)] = mowb.ALUOUT;
-            if (registerLock[stoi(mowb.rdl, NULL, 2)] == 1)
-                toUnlockRegister = true;
+            cout << "GPR[to_int(mowb.rdl)] " << GPR[to_int(mowb.rdl)] << endl;
+
+            if (inUse[stoi(mowb.rdl, NULL, 2)] == 1)
+            {
+                shouldUnlock = true;
+            }
         }
     }
 
-    if (toUnlockRegister)
+    if (shouldUnlock)
     {
-        bubbleInserted_data = false;
-        stopForOneTime = true;
-        registerLock[stoi(mowb.rdl, NULL, 2)] = 0;
+        data_bubble = false;
+        stopOnce = true;
+        inUse[stoi(mowb.rdl, NULL, 2)] = 0;
+    }
+
+    return 1;
+}
+
+//***************************************************** CPU ENDS *****************************************************//
+
+void printGPR()
+{
+    cout << "GPR values after the whole execution" << endl;
+    for(int i = 0; i < 32; i++)
+    {
+        if(i <= 9){
+            cout << "GPR[" << i << "]     " << GPR[i] << endl;
+        }
+        else 
+        {
+            cout << "GPR[" << i << "]    " << GPR[i] << endl;
+        }
     }
 }
 
+//____________________________________________________________________________________________________________________//
+
+
+//*************************************************** MAIN FUNCTION **************************************************//
+
+//____________________________________________________________________________________________________________________//
+
+
 int main()
 {
+
+//********************************************** Assembly to Machine Code ********************************************//
+
     vector<string> assemblyCode = {
-        // "lw x5, 11(x6)", // int n = 10
-        // "addi x1, x1, 1",
-        // "addi x5, x5, 1",
-        // "sum_loop:",
-        // "beq x1, x5, done",
-        // "add x2, x2, x1",
-        // "addi x1, x1, 1",
-        // "jal x3, sum_loop",
-        // "done:",
-        // "sw x2, 0(x31)"
 
-        "lw x1, 0(x0)",
-        "beq x1, x0, done",
-        "addi x3, x3, 1",
-        "beq x1, x3, done",
-        "addi x2, x0, 1",
-        "addi x4, x4, 1",
-        "for:",
-        "beq x2, x1, done",
-        "add x3, x4, x5",
-        "add x5, x4, x0",
-        "add x4, x3, x0",
-        "addi x2, x2, 1",
-        "jal x6, for",
-        "done:",
-        "sw x3, 1(x0)"
+        /******************** Sum of n-numbers ********************/
 
-        // "lw x1, 0(x0)",
-        // "addi x1, x1 , 1",
-        // "addi x2, x0, 1",
+        // "lw x5, 0(x6)",        // (x5 = DM[x6+0];)
+
+        "addi x5, x5, 10",      // int n = 10;
+        "addi x1, x1, 0",       // int i = 0; (x1 = 0)
+        "addi x2, x2, 0",       // int sum = 0;
+
+        "addi x5, x5, 1",       // n = n + 1;
+
+        "sum_loop:",            
+        "beq x1, x5, done",     // if(i == n) goto done;
+        "add x2, x2, x1",       // sum = sum + i;
+        "addi x1, x1, 1",       // i = i + 1;
+        "jal x3, sum_loop",     
+
+        "done:",    
+        "sw x2, 0(x31)"         // DM[x31+0] = x2;
+
+        /**********************************************************/
+
+
+        /******************** N-th Fibonacci **********************/
+
+        // "lw x1, 0(x7)",         // x1 = DM[x7+0];
+
+        // "addi x1, x1, 10",      // int n = 0;
+        // "beq x1, x0, done",     // if(n == 0) goto done;
+        // "addi x3, x3, 1",       // int c = 1;
+        // "beq x1, x3, done",     // if(n == 1) goto done;
+
+        // "addi x2, x2, 1",       // int i = 1; 
+
+        // "addi x4, x4, 1",       // int b = 1;
+        // "addi x5, x5, 0",       // int a = 0;
+
         // "for:",
-        // "beq x2, x1, done",
-        // "add x3, x3, x2",
-        // "addi x2, x2, 1",
-        // "jal x4, for",
+        // "beq x2, x1, done",     // if(i == n) goto done;
+        // "add x3, x4, x5",       // c = b + a;
+        // "add x5, x4, x0",       // a = b + 0;
+        // "add x4, x3, x0",       // b = c + 0;
+
+        // "addi x2, x2, 1",       // i = i + 1;
+        // "jal x6, for",          // jump to for
+
         // "done:",
-        // "sw x3, 1(x0)"
+        // "sw x3, 1(x0)"          // DM[x0+1] = x3;
+
+        /**********************************************************/
     };
+
     // readCodeAndFindLabel(assemblyCode);
+
     int count = 0;
     for (int i = 0; i < assemblyCode.size(); i++)
     {
@@ -1274,20 +1531,33 @@ int main()
         }
         count++;
     }
-    for (auto &label : labels)
-    {
-        cout << label.first << " " << label.second << endl;
-    }
+
+    // for (auto &label : labels)
+    // {
+    //     cout << label.first << " " << label.second << endl;
+    // }
 
     Assembler assembler;
     vector<string> machineCode = convertToMachineCode(assembler, assemblyCode);
 
-    printCodes(machineCode);
-
-//--------------------------------------------------------------------Assembly to Machine Code Conversion Done--------------------------------------------------------------------//
-
-//--------------------------------------------------------------------Machine Code to Output Starts--------------------------------------------------------------------//
+    cout << endl;
     
+    cout << "---------------------Assembly Starts----------------------" << endl;
+    cout << endl;
+    printCodes("A", assemblyCode);
+    printCodes("M", machineCode);
+    cout << endl;
+    cout << "----------------------Assembler Ends----------------------" << endl;
+
+    cout << endl;
+
+//********************************************************************************************************************//
+
+
+//********************************************** Machine Code to Output **********************************************//
+    
+    //********************* Initializations *********************//
+
     IFID ifid;
     IDEX idex;
     EXMO exmo;
@@ -1300,78 +1570,165 @@ int main()
     int n = machineCode.size();
     N = n;
 
+    //***********************************************************//
+
+    //**************** Simulation of the Pipeline****************//
+
+    int i = 0;
+
     while (PC < n * 4 || valid.PC || valid.ifid || valid.idex || valid.exmo || valid.mowb)
     {
+        cout << endl;
+        if(i <= 9){
+            cout << "***********************Cycle " << i++ << " Starts***********************" << endl;
+        }
+        else if(i <= 99){
+            cout << "***********************Cycle " << i++ << " Starts**********************" << endl;
+        }
+        else {
+            cout << "**********************Cycle " << i++ << " Starts**********************" << endl;
+        }
+
+        cout << endl;
         if (valid.mowb)
-        {
-            RW(mowb);
-            cout << "stage5" << endl;
+        {   
             cout << endl;
-            cout << "DM[exmo.ALUOUT] " << DM[exmo.ALUOUT] << endl;
-            cout << "to_int(mowb.rdl) " << to_int(mowb.rdl) << endl;
-            cout << "GPR[to_int(mowb.rdl)] " << GPR[to_int(mowb.rdl)] << endl;
-            cout << "PC " << PC << endl;
-            cout << "GPR[0] " << GPR[0] << endl;
-            cout << "GPR[1] " << GPR[1] << endl;
-            cout << "GPR[2] " << GPR[2] << endl;
-            cout << "GPR[3] " << GPR[3] << endl;
-            cout << "GPR[4] " << GPR[4] << endl;
-            cout << "GPR[5] " << GPR[5] << endl;
-            cout << "DM[0] " << DM[0] << endl;
-            cout << "DM[1] " << DM[1] << endl;
+            cout << "--------------------WriteBack (Stage-5)---------------------" << endl;
+            if(WB(mowb))
+            {
+                cout << endl;
+                cout << "DM[exmo.ALUOUT] " << DM[exmo.ALUOUT] << endl;
+                cout << "to_int(mowb.rdl) " << to_int(mowb.rdl) << endl;
+                cout << "GPR[to_int(mowb.rdl)] " << GPR[to_int(mowb.rdl)] << endl;
+                cout << "PC " << PC << endl;
+                cout << "GPR[0] " << GPR[0] << endl;
+                cout << "GPR[1] " << GPR[1] << endl;
+                cout << "GPR[2] " << GPR[2] << endl;
+                cout << "GPR[3] " << GPR[3] << endl;
+                cout << "GPR[4] " << GPR[4] << endl;
+                cout << "GPR[5] " << GPR[5] << endl;
+                cout << "DM[0] " << DM[0] << endl;
+                cout << "DM[1] " << DM[1] << endl;
+                cout << endl;
+            }
+            cout << "-----------------------WriteBack Ends-----------------------" << endl;
+            cout << endl;
+            cout << endl;
         }
+
         if (valid.exmo)
-        {
-            MA(mowb, exmo);
-            cout << "stage4" << endl;
+        {   
             cout << endl;
-            cout << "mowb.ALUOUT " << mowb.ALUOUT << endl;
-            cout << "mowb.LDOUT " << mowb.LDOUT << endl;
-            cout << "mowb.rdl " << mowb.rdl << endl;
+            cout << "-------------------Memory Operation (Stage-4)---------------" << endl;
+            if(MO(mowb, exmo))
+            {
+                cout << endl;
+                cout << "mowb.ALUOUT " << mowb.ALUOUT << endl;
+                cout << "mowb.LDOUT " << mowb.LDOUT << endl;
+                cout << "mowb.rdl " << mowb.rdl << endl;
+                cout << endl;
+            }
+            cout << "---------------------Memory Operation Ends------------------" << endl;
+            cout << endl;
+            cout << endl;
         }
+
         if (valid.idex)
-        {
-            IE(exmo, idex);
-            cout << "stage3" << endl;
+        {            
             cout << endl;
-            cout << "ALUOUT " << exmo.ALUOUT << endl;
+            cout << "------------------Instruction Execute (Stage-3)-------------" << endl;
+            if(IE(exmo, idex))
+            {
+                cout << endl;
+                cout << "ALUOUT " << exmo.ALUOUT << endl;
+                cout << endl;
+            }
+            cout << "------------------Instruction Execution Ends----------------" << endl;
+            cout << endl;
+            cout << endl;
         }
+
         if (valid.ifid)
         {
-            cout << "stage2" << endl;
-            ID(idex, ifid, exmo);
-
-            cout << "imm1 " << idex.imm1 << endl;
-            cout << "imm2 " << idex.imm2 << endl;
-            cout << "func " << idex.func << endl;
-            cout << "rdl " << idex.rdl << endl;
-            cout << "rs1 " << idex.rs1 << endl;
-            cout << "rs2 " << idex.rs2 << endl;
-            cout << "JPC " << idex.JPC << endl;
-            cout << "DPC " << idex.DPC << endl;
             cout << endl;
-            cout << "RegRead " << idex.cw.RegRead << endl;
-            cout << "RegWrite " << idex.cw.RegWrite << endl;
-            cout << "ALUSrc " << idex.cw.ALUSrc << endl;
-            cout << "ALUOp " << idex.cw.ALUOp << endl;
-            cout << "Branch " << idex.cw.Branch << endl;
-            cout << "Jump " << idex.cw.Jump << endl;
-            cout << "MemRead " << idex.cw.MemRead << endl;
-            cout << "MemWrite " << idex.cw.MemWrite << endl;
-            cout << "Mem2Reg " << idex.cw.Mem2Reg << endl;
+            cout << "-----------------Instruction Decode (Stage-2)---------------" << endl;
+            if(ID(idex, ifid, exmo))
+            {
+                cout << endl;
+                cout << "imm1 " << idex.imm1 << endl;
+                cout << "imm2 " << idex.imm2 << endl;
+                cout << "func " << idex.func << endl;
+                cout << "rdl " << idex.rdl << endl;
+                cout << "rs1 " << idex.rs1 << endl;
+                cout << "rs2 " << idex.rs2 << endl;
+                cout << "JPC " << idex.JPC << endl;
+                cout << "DPC " << idex.DPC << endl;
+                cout << endl;
+                cout << "-------------CONTROL WORD-------------" << endl;
+                cout << "| RegRead   " << idex.cw.RegRead  << "                         |"  << endl;
+                cout << "| RegWrite  " << idex.cw.RegWrite << "                         |"  << endl;
+                cout << "| ALUSrc    " << idex.cw.ALUSrc   << "                         |"  << endl;
+
+                if(idex.cw.ALUOp <= 9){
+                    cout << "| ALUOp     0" << idex.cw.ALUOp    << "                        |"  << endl;
+                }
+                else {
+                    cout << "| ALUOp     " << idex.cw.ALUOp    << "                        |"  << endl;
+                }
+
+                cout << "| Branch    " << idex.cw.Branch   << "                         |"  << endl;
+                cout << "| Jump      " << idex.cw.Jump     << "                         |"  << endl;
+                cout << "| MemRead   " << idex.cw.MemRead  << "                         |"  << endl;
+                cout << "| MemWrite  " << idex.cw.MemWrite << "                         |"  << endl;
+                cout << "| Mem2Reg   " << idex.cw.Mem2Reg  << "                         |"  << endl;
+                cout << "--------------------------------------" << endl;
+                cout << endl;
+            }
+            cout << "------------------Instruction Decode Ends-------------------" << endl;
+            cout << endl;
+            cout << endl;
         }
+
         if (valid.PC)
         {
-            cout << "stage1" << endl;
-            cout << endl
-                 << "Instruction: " << PC / 4 << endl;
-            IF(ifid);
-            cout << "IR " << ifid.IR << endl;
-            cout << "DPC " << ifid.DPC << endl;
-            cout << "NPC " << ifid.NPC << endl;
-
+            cout << endl;
+            cout << "----------------Instruction Fetch (Stage-1)-----------------" << endl;
+            cout << "Instruction: " << PC / 4 << endl;
+            if(IF(ifid))
+            {
+                cout << endl;
+                cout << "IR " << ifid.IR << endl;
+                cout << "DPC " << ifid.DPC << endl;
+                cout << "NPC " << ifid.NPC << endl;
+                cout << endl;
+            }
+            cout << "-------------------Instruction Fetch Ends-------------------" << endl;
+            cout << endl;
             cout << endl;
         }
+
+        if(i <= 9){
+            cout << "**********************Cycle " << i++ << " Finishes**********************" << endl;
+        }
+        else if(i <= 99){
+            cout << "**********************Cycle " << i++ << " Finishes*********************" << endl;
+        }
+        else {
+            cout << "*********************Cycle " << i++ << " Finishes*********************" << endl;
+        }
+        cout << endl;
+        cout << endl;
     }
+
+    printGPR();
+
+    //***********************************************************//
+
     return 0;
+    
+//********************************************************************************************************************//
+
 }
+
+//*************************************************** MAIN FUNCTION ENDS *********************************************//
+
